@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(slam_in_auto_driving)
+project(slam_in_autonomous_driving_and_robotics_hw)
 
 set(DEFAULT_BUILD_TYPE "Release")
 set(CMAKE_CXX_STANDARD 17)
