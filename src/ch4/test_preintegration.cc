@@ -24,7 +24,6 @@ DEFINE_double(antenna_angle, 12.06, "RTK天线安装偏角（角度）");
 DEFINE_double(antenna_pox_x, -0.17, "RTK天线安装偏移X");
 DEFINE_double(antenna_pox_y, -0.20, "RTK天线安装偏移Y");
 DEFINE_bool(with_ui, true, "是否显示图形界面");
-DEFINE_bool(left_model, false, "是否使用左乘模型");
 
 TEST(PREINTEGRATION_TEST, ROTATION_TEST)
 {
@@ -200,7 +199,7 @@ TEST(PREINTEGRATION_TEST, ESKF_TEST)
 
           /// GNSS 也接收到之后，再开始进行预测
           double current_time = eskf.GetNominalState().timestamp_;
-          eskf.Predict(imu, FLAGS_left_model);
+          eskf.Predict(imu);
 
           if (preinteg)
           {
@@ -242,7 +241,7 @@ TEST(PREINTEGRATION_TEST, ESKF_TEST)
             // 要求RTK heading有效，才能合入EKF
             auto state_bef_update = eskf.GetNominalState();
 
-            eskf.ObserveGps(gnss_convert, FLAGS_left_model);
+            eskf.ObserveGps(gnss_convert);
 
             // 验证优化过程是否正确
             if (last_state_set && last_gnss_set)

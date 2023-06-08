@@ -57,7 +57,7 @@ int main(int argc, char **argv)
         fout << std::endl;
     };
 
-    std::ofstream fout("../data/ch3/state.txt");
+    std::ofstream fout("./data/ch3/state.txt");
     io.SetIMUProcessFunc([&imu_integ, &save_result, &fout, &ui](const sad::IMU &imu) {
           imu_integ.AddIMU(imu);
           save_result(fout, imu.timestamp_, imu_integ.GetR(), imu_integ.GetV(), imu_integ.GetP());

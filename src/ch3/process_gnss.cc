@@ -11,7 +11,7 @@
 #include "tools/ui/pangolin_window.h"
 #include "utm_convert.h"
 
-DEFINE_string(txt_path, "../data/ch3/10.txt", "数据文件路径");
+DEFINE_string(txt_path, "./data/ch3/10.txt", "数据文件路径");
 
 // 以下参数仅针对本书提供的数据
 DEFINE_double(antenna_angle, 12.06, "RTK天线安装偏角（角度）");
@@ -27,26 +27,24 @@ DEFINE_bool(with_ui, true, "是否显示图形界面");
  * 我们将结果保存在文件中，然后用python脚本进行可视化
  */
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = google::INFO;
     FLAGS_colorlogtostderr = true;
     google::ParseCommandLineFlags(&argc, &argv, true);
 
-    if (fLS::FLAGS_txt_path.empty())
-    {
+    if (fLS::FLAGS_txt_path.empty()) {
         return -1;
     }
 
     sad::TxtIO io(fLS::FLAGS_txt_path);
 
-    std::ofstream fout("../data/ch3/gnss_output.txt");
+    std::ofstream fout("./data/ch3/gnss_output.txt");
     Vec2d antenna_pos(FLAGS_antenna_pox_x, FLAGS_antenna_pox_y);
 
-    auto save_result = [](std::ofstream &fout, double timestamp, const SE3 &pose) {
-        auto save_vec3 = [](std::ofstream &fout, const Vec3d &v) { fout << v[0] << " " << v[1] << " " << v[2] << " "; };
-        auto save_quat = [](std::ofstream &fout, const Quatd &q) {
+    auto save_result = [](std::ofstream& fout, double timestamp, const SE3& pose) {
+        auto save_vec3 = [](std::ofstream& fout, const Vec3d& v) { fout << v[0] << " " << v[1] << " " << v[2] << " "; };
+        auto save_quat = [](std::ofstream& fout, const Quatd& q) {
             fout << q.w() << " " << q.x() << " " << q.y() << " " << q.z() << " ";
         };
 
@@ -57,20 +55,17 @@ int main(int argc, char **argv)
     };
 
     std::shared_ptr<sad::ui::PangolinWindow> ui = nullptr;
-    if (FLAGS_with_ui)
-    {
+    if (FLAGS_with_ui) {
         ui = std::make_shared<sad::ui::PangolinWindow>();
         ui->Init();
     }
 
     bool first_gnss_set = false;
     Vec3d origin = Vec3d::Zero();
-    io.SetGNSSProcessFunc([&](const sad::GNSS &gnss) {
+    io.SetGNSSProcessFunc([&](const sad::GNSS& gnss) {
           sad::GNSS gnss_out = gnss;
-          if (sad::ConvertGps2UTM(gnss_out, antenna_pos, FLAGS_antenna_angle))
-          {
-              if (!first_gnss_set)
-              {
+          if (sad::ConvertGps2UTM(gnss_out, antenna_pos, FLAGS_antenna_angle)) {
+              if (!first_gnss_set) {
                   origin = gnss_out.utm_pose_.translation();
                   first_gnss_set = true;
               }
@@ -86,10 +81,8 @@ int main(int argc, char **argv)
           }
       }).Go();
 
-    if (ui)
-    {
-        while (!ui->ShouldQuit())
-        {
+    if (ui) {
+        while (!ui->ShouldQuit()) {
             usleep(1e5);
         }
         ui->Quit();

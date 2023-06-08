@@ -36,33 +36,21 @@ int main(int argc, char **argv)
     Vec3d omega(0, 0, angular_velocity_rad);                                    // 角速度矢量
     Vec3d v_body(FLAGS_linear_velocity, 0, 0);                                  // 本体系速度
     const double dt = 0.05;                                                     // 每次更新的时间
-    const Vec3d g_w(0, 0, -9.8);                                                // 重力加速度
+    const double g_norm = 9.8;
+    static double v_z = 0.0;
 
     while (ui.ShouldQuit() == false)
     {
-        Vec3d v_world(0.0, 0.0, 0.0);
-        // 如果有重力，加上重力对位移的影响
+        std::cout << "FLAGS_has_gravity: " << FLAGS_has_gravity << std::endl;
         if (FLAGS_has_gravity)
         {
-            // 更新自身位置
-            v_world = pose.so3() * v_body;
-            pose.translation() += (v_world * dt + 0.5 * g_w * dt * dt);
-        }
-        else
-        {
-            // 更新自身位置
-            v_world = pose.so3() * v_body;
-            pose.translation() += v_world * dt;
+            v_z -= g_norm * dt;
+            v_body = Vec3d(FLAGS_linear_velocity, 0, v_z); // 本体系速度
         }
 
-        // 如果有重力，加上重力对速度的影响
-        if (FLAGS_has_gravity)
-        {
-            // 重力从world系转到body系
-            // g_b = Rwb.inverse() * g_w
-            Vec3d g_b = pose.so3().inverse() * g_w;
-            v_body += g_b * dt;
-        }
+        // 更新自身位置
+        Vec3d v_world = pose.so3() * v_body;
+        pose.translation() += v_world * dt;
 
         // 更新自身旋转
         if (FLAGS_use_quaternion)
@@ -77,6 +65,7 @@ int main(int argc, char **argv)
         }
 
         LOG(INFO) << "pose: " << pose.translation().transpose();
+        LOG(INFO) << "v_body: " << v_body.transpose();
         ui.UpdateNavState(sad::NavStated(0, pose, v_world));
 
         usleep(dt * 1e6);

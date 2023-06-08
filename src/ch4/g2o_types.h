@@ -13,9 +13,24 @@
 
 #include "ch4/imu_preintegration.h"
 #include "common/eigen_types.h"
+#include "common/math_utils.h"
 
 namespace sad
 {
+
+// 验证数值求导的函数，求残差
+// 4.41a
+Vec3d r_Rij(Mat3d dR_ij, Mat3d R_i, Mat3d R_j);
+
+// 4.41b
+Vec3d r_vij(Mat3d R_i, Vec3d v_j, Vec3d v_i, Vec3d g, double dt_ij, Vec3d dv_ij);
+
+// 4.41c
+Vec3d r_pij(Mat3d R_i, Vec3d p_j, Vec3d p_i, Vec3d v_i, double dt_ij, Vec3d g, Vec3d dp_ij);
+
+Mat3d ch4_skew(const Vec3d &v);
+
+Mat3d ch4_Exp(const Vec3d &ang);
 
 /// 与预积分相关的vertex, edge
 /**

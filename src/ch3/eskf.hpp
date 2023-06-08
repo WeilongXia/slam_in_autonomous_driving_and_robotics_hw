@@ -95,13 +95,13 @@ template <typename S = double> class ESKF
     }
 
     /// 使用IMU递推
-    bool Predict(const IMU &imu, const bool &use_left_model);
+    bool Predict(const IMU &imu);
 
     /// 使用轮速计观测
-    bool ObserveWheelSpeed(const Odom &odom, const bool &use_left_model);
+    bool ObserveWheelSpeed(const Odom &odom);
 
     /// 使用GPS观测
-    bool ObserveGps(const GNSS &gnss, const bool &use_left_model);
+    bool ObserveGps(const GNSS &gnss);
 
     /**
      * 使用SE3进行观测
@@ -110,8 +110,7 @@ template <typename S = double> class ESKF
      * @param ang_noise   角度噪声
      * @return
      */
-    bool ObserveSE3(const SE3 &pose, const bool &use_left_model, double trans_noise = 0.1,
-                    double ang_noise = 1.0 * math::kDEG2RAD);
+    bool ObserveSE3(const SE3 &pose, double trans_noise = 0.1, double ang_noise = 1.0 * math::kDEG2RAD);
 
     /// accessors
     /// 获取全量状态
@@ -178,18 +177,11 @@ template <typename S = double> class ESKF
     }
 
     /// 更新名义状态变量，重置error state
-    void UpdateAndReset(const bool &use_left_model)
+    void UpdateAndReset()
     {
         p_ += dx_.template block<3, 1>(0, 0);
         v_ += dx_.template block<3, 1>(3, 0);
-        if (!use_left_model)
-        {
-            R_ = R_ * SO3::exp(dx_.template block<3, 1>(6, 0));
-        }
-        else
-        {
-            R_ = SO3::exp(dx_.template block<3, 1>(6, 0)) * R_;
-        }
+        R_ = R_ * SO3::exp(dx_.template block<3, 1>(6, 0));
 
         if (options_.update_bias_gyro_)
         {
@@ -203,22 +195,15 @@ template <typename S = double> class ESKF
 
         g_ += dx_.template block<3, 1>(15, 0);
 
-        ProjectCov(use_left_model);
+        ProjectCov();
         dx_.setZero();
     }
 
     /// 对P阵进行投影，参考式(3.63)
-    void ProjectCov(const bool &use_left_model)
+    void ProjectCov()
     {
         Mat18T J = Mat18T::Identity();
-        if (!use_left_model)
-        {
-            J.template block<3, 3>(6, 6) = Mat3T::Identity() - 0.5 * SO3::hat(dx_.template block<3, 1>(6, 0));
-        }
-        else
-        {
-            J.template block<3, 3>(6, 6) = Mat3T::Identity() + 0.5 * SO3::hat(dx_.template block<3, 1>(6, 0));
-        }
+        J.template block<3, 3>(6, 6) = Mat3T::Identity() - 0.5 * SO3::hat(dx_.template block<3, 1>(6, 0));
         cov_ = J * cov_ * J.transpose();
     }
 
@@ -254,7 +239,7 @@ template <typename S = double> class ESKF
 using ESKFD = ESKF<double>;
 using ESKFF = ESKF<float>;
 
-template <typename S> bool ESKF<S>::Predict(const IMU &imu, const bool &use_left_model)
+template <typename S> bool ESKF<S>::Predict(const IMU &imu)
 {
     assert(imu.timestamp_ >= current_time_);
 
@@ -280,50 +265,22 @@ template <typename S> bool ESKF<S>::Predict(const IMU &imu, const bool &use_left
     // error state 递推
     // 计算运动过程雅可比矩阵 F，见(3.47)
     // F实际上是稀疏矩阵，也可以不用矩阵形式进行相乘而是写成散装形式，这里为了教学方便，使用矩阵形式
-    Mat18T F = Mat18T::Identity();                         // 主对角线
-    F.template block<3, 3>(0, 3) = Mat3T::Identity() * dt; // p 对 v
-    if (!use_left_model)
-    {
-        F.template block<3, 3>(3, 6) = -R_.matrix() * SO3::hat(imu.acce_ - ba_) * dt; // v对theta
-        F.template block<3, 3>(3, 12) = -R_.matrix() * dt;                            // v 对 ba
-        F.template block<3, 3>(3, 15) = Mat3T::Identity() * dt;                       // v 对 g
-        F.template block<3, 3>(6, 6) = SO3::exp(-(imu.gyro_ - bg_) * dt).matrix();    // theta 对 theta
-        F.template block<3, 3>(6, 9) = -Mat3T::Identity() * dt;                       // theta 对 bg
-    }
-    else
-    {
-        F.template block<3, 3>(3, 6) = -SO3::hat(R_.matrix() * (imu.acce_ - ba_)) * dt; // v对theta
-        F.template block<3, 3>(3, 12) = -R_.matrix() * dt;                              // v 对 ba
-        F.template block<3, 3>(3, 15) = Mat3T::Identity() * dt;                         // v 对 g
-        F.template block<3, 3>(6, 9) = -R_.matrix() * dt;                               // theta 对 bg
-    }
+    Mat18T F = Mat18T::Identity();                                                // 主对角线
+    F.template block<3, 3>(0, 3) = Mat3T::Identity() * dt;                        // p 对 v
+    F.template block<3, 3>(3, 6) = -R_.matrix() * SO3::hat(imu.acce_ - ba_) * dt; // v对theta
+    F.template block<3, 3>(3, 12) = -R_.matrix() * dt;                            // v 对 ba
+    F.template block<3, 3>(3, 15) = Mat3T::Identity() * dt;                       // v 对 g
+    F.template block<3, 3>(6, 6) = SO3::exp(-(imu.gyro_ - bg_) * dt).matrix();    // theta 对 theta
+    F.template block<3, 3>(6, 9) = -Mat3T::Identity() * dt;                       // theta 对 bg
 
     // mean and cov prediction
     dx_ = F * dx_; // 这行其实没必要算，dx_在重置之后应该为零，因此这步可以跳过，但F需要参与Cov部分计算，所以保留
-    // // 实现各个状态变量单独的运动方程
-    // // \delta p
-    // dx_.template block<3, 1>(0, 0) = dx_.template block<3, 1>(0, 0) + dx_.template block<3, 1>(3, 0) * dt;
-    // // \delta v
-    // dx_.template block<3, 1>(3, 0) =
-    //     dx_.template block<3, 1>(3, 0) - R_.matrix() * SO3::hat(imu.acce_ - ba_) * dt * dx_.template block<3, 1>(6,
-    //     0) - R_.matrix() * dt * dx_.template block<3, 1>(12, 0) + Mat3T::Identity() * dt * dx_.template block<3,
-    //     1>(15, 0);
-    // // \delta \theta
-    // dx_.template block<3, 1>(6, 0) = SO3::exp(-(imu.gyro_ - bg_) * dt).matrix() * dx_.template block<3, 1>(6, 0) -
-    //                                  Mat3T::Identity() * dt * dx_.template block<3, 1>(9, 0);
-    // // \delta b_g
-    // dx_.template block<3, 1>(9, 0) = dx_.template block<3, 1>(9, 0);
-    // // \delta b_a
-    // dx_.template block<3, 1>(12, 0) = dx_.template block<3, 1>(12, 0);
-    // // \delta g
-    // dx_.template block<3, 1>(15, 0) = dx_.template block<3, 1>(15, 0);
-
     cov_ = F * cov_.eval() * F.transpose() + Q_;
     current_time_ = imu.timestamp_;
     return true;
 }
 
-template <typename S> bool ESKF<S>::ObserveWheelSpeed(const Odom &odom, const bool &use_left_model)
+template <typename S> bool ESKF<S>::ObserveWheelSpeed(const Odom &odom)
 {
     assert(odom.timestamp_ >= current_time_);
     // odom 修正以及雅可比
@@ -348,11 +305,11 @@ template <typename S> bool ESKF<S>::ObserveWheelSpeed(const Odom &odom, const bo
     // update cov
     cov_ = (Mat18T::Identity() - K * H) * cov_;
 
-    UpdateAndReset(use_left_model);
+    UpdateAndReset();
     return true;
 }
 
-template <typename S> bool ESKF<S>::ObserveGps(const GNSS &gnss, const bool &use_left_model)
+template <typename S> bool ESKF<S>::ObserveGps(const GNSS &gnss)
 {
     /// GNSS 观测的修正
     assert(gnss.unix_time_ >= current_time_);
@@ -367,14 +324,13 @@ template <typename S> bool ESKF<S>::ObserveGps(const GNSS &gnss, const bool &use
     }
 
     assert(gnss.heading_valid_);
-    ObserveSE3(gnss.utm_pose_, use_left_model, options_.gnss_pos_noise_, options_.gnss_ang_noise_);
+    ObserveSE3(gnss.utm_pose_, options_.gnss_pos_noise_, options_.gnss_ang_noise_);
     current_time_ = gnss.unix_time_;
 
     return true;
 }
 
-template <typename S>
-bool ESKF<S>::ObserveSE3(const SE3 &pose, const bool &use_left_model, double trans_noise, double ang_noise)
+template <typename S> bool ESKF<S>::ObserveSE3(const SE3 &pose, double trans_noise, double ang_noise)
 {
     /// 既有旋转，也有平移
     /// 观测状态变量中的p, R，H为6x18，其余为零
@@ -391,20 +347,13 @@ bool ESKF<S>::ObserveSE3(const SE3 &pose, const bool &use_left_model, double tra
 
     // 更新x和cov
     Vec6d innov = Vec6d::Zero();
-    innov.template head<3>() = (pose.translation() - p_); // 平移部分
-    if (!use_left_model)
-    {
-        innov.template tail<3>() = (R_.inverse() * pose.so3()).log(); // 旋转部分(3.67)
-    }
-    else
-    {
-        innov.template tail<3>() = (pose.so3() * R_.inverse()).log(); // 旋转部分(3.67)
-    }
+    innov.template head<3>() = (pose.translation() - p_);         // 平移部分
+    innov.template tail<3>() = (R_.inverse() * pose.so3()).log(); // 旋转部分(3.67)
 
     dx_ = K * innov;
     cov_ = (Mat18T::Identity() - K * H) * cov_;
 
-    UpdateAndReset(use_left_model);
+    UpdateAndReset();
     return true;
 }
 

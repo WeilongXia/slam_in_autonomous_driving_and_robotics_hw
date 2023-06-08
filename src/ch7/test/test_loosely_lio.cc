@@ -9,13 +9,12 @@
 #include "common/sys_utils.h"
 #include "common/timer/timer.h"
 
-DEFINE_string(bag_path, "/home/xwl/Downloads/avia/outdoor_Mainbuilding_10hz_2020-12-24-16-38-00.bag", "path to rosbag");
-DEFINE_string(dataset_type, "AVIA", "NCLT/ULHK/UTBM/AVIA");          // 数据集类型
-DEFINE_string(config, "../config/avia.yaml", "path of config yaml"); // 配置文件类型
+DEFINE_string(bag_path, "./dataset/sad/ulhk/test3.bag", "path to rosbag");
+DEFINE_string(dataset_type, "ULHK", "NCLT/ULHK/UTBM/AVIA");                   // 数据集类型
+DEFINE_string(config, "./config/velodyne_ulhk.yaml", "path of config yaml");  // 配置文件类型
 DEFINE_bool(display_map, true, "display map?");
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = google::INFO;
     FLAGS_colorlogtostderr = true;
@@ -33,7 +32,7 @@ int main(int argc, char **argv)
             sad::common::Timer::Evaluate([&]() { lm.PCLCallBack(cloud); }, "loosely lio");
             return true;
         })
-        .AddLivoxHandle([&](const livox_ros_driver::CustomMsg::ConstPtr &msg) -> bool {
+        .AddLivoxHandle([&](const livox_ros_driver::CustomMsg::ConstPtr& msg) -> bool {
             sad::common::Timer::Evaluate([&]() { lm.LivoxPCLCallBack(msg); }, "loosely lio");
             return true;
         })

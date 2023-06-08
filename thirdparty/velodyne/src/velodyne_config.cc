@@ -1,9 +1,7 @@
 #include "tools/velodyne32/include/velodyne_config.h"
 
-namespace driver
-{
-namespace velodyne
-{
+namespace driver {
+namespace velodyne {
 
 float CalibParams::x_offset = 1.05;
 float CalibParams::y_offset = 0.0;
@@ -33,5 +31,5 @@ double Config::speed = 1.00;
 std::string Config::packets_topic = "velodyne_packets";
 bool Config::enable_coordinate_transformation = false;
 
-} // namespace velodyne
-} // namespace driver
+}
+}

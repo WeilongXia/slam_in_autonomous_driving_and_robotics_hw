@@ -107,8 +107,7 @@ static long UTM_Override = 0;            /* Zone override flag                  
  *
  */
 
-long Set_UTM_Parameters(double a, double f, long override)
-{
+long Set_UTM_Parameters(double a, double f, long override) {
     /*
      * The function Set_UTM_Parameters receives the ellipsoid parameters and
      * UTM zone override parameter as inputs, and sets the corresponding state
@@ -123,20 +122,16 @@ long Set_UTM_Parameters(double a, double f, long override)
     double inv_f = 1 / f;
     long Error_Code = UTM_NO_ERROR;
 
-    if (a <= 0.0)
-    { /* Semi-major axis must be greater than zero */
+    if (a <= 0.0) { /* Semi-major axis must be greater than zero */
         Error_Code |= UTM_A_ERROR;
     }
-    if ((inv_f < 250) || (inv_f > 350))
-    { /* Inverse flattening must be between 250 and 350 */
+    if ((inv_f < 250) || (inv_f > 350)) { /* Inverse flattening must be between 250 and 350 */
         Error_Code |= UTM_INV_F_ERROR;
     }
-    if ((override < 0) || (override > 60))
-    {
+    if ((override < 0) || (override > 60)) {
         Error_Code |= UTM_ZONE_OVERRIDE_ERROR;
     }
-    if (!Error_Code)
-    { /* no errors */
+    if (!Error_Code) { /* no errors */
         UTM_a = a;
         UTM_f = f;
         UTM_Override = override;
@@ -144,8 +139,7 @@ long Set_UTM_Parameters(double a, double f, long override)
     return (Error_Code);
 } /* END OF Set_UTM_Parameters */
 
-void Get_UTM_Parameters(double *a, double *f, long *override)
-{
+void Get_UTM_Parameters(double *a, double *f, long *override) {
     /*
      * The function Get_UTM_Parameters returns the current ellipsoid
      * parameters and UTM zone override parameter.
@@ -161,8 +155,7 @@ void Get_UTM_Parameters(double *a, double *f, long *override)
 } /* END OF Get_UTM_Parameters */
 
 long Convert_Geodetic_To_UTM(double Latitude, double Longitude, long *Zone, char *Hemisphere, double *Easting,
-                             double *Northing)
-{
+                             double *Northing) {
     /*
      * The function Convert_Geodetic_To_UTM converts geodetic (latitude and
      * longitude) coordinates to UTM projection (zone, hemisphere, easting and
@@ -188,92 +181,67 @@ long Convert_Geodetic_To_UTM(double Latitude, double Longitude, long *Zone, char
     double False_Northing = 0;
     double Scale = 0.9996;
 
-    if ((Latitude < MIN_LAT) || (Latitude > MAX_LAT))
-    { /* Latitude out of range */
+    if ((Latitude < MIN_LAT) || (Latitude > MAX_LAT)) { /* Latitude out of range */
         Error_Code |= UTM_LAT_ERROR;
     }
-    if ((Longitude < -PI) || (Longitude > (2 * PI)))
-    { /* Longitude out of range */
+    if ((Longitude < -PI) || (Longitude > (2 * PI))) { /* Longitude out of range */
         Error_Code |= UTM_LON_ERROR;
     }
-    if (!Error_Code)
-    { /* no errors */
-        if ((Latitude > -1.0e-9) && (Latitude < 0))
-            Latitude = 0.0;
-        if (Longitude < 0)
-            Longitude += (2 * PI) + 1.0e-10;
+    if (!Error_Code) { /* no errors */
+        if ((Latitude > -1.0e-9) && (Latitude < 0)) Latitude = 0.0;
+        if (Longitude < 0) Longitude += (2 * PI) + 1.0e-10;
 
         Lat_Degrees = (long)(Latitude * 180.0 / PI);
         Long_Degrees = (long)(Longitude * 180.0 / PI);
 
-        if (Longitude < PI)
-            temp_zone = (long)(31 + ((Longitude * 180.0 / PI) / 6.0));
+        if (Longitude < PI) temp_zone = (long)(31 + ((Longitude * 180.0 / PI) / 6.0));
         else
             temp_zone = (long)(((Longitude * 180.0 / PI) / 6.0) - 29);
 
-        if (temp_zone > 60)
-            temp_zone = 1;
+        if (temp_zone > 60) temp_zone = 1;
         /* UTM special cases */
-        if ((Lat_Degrees > 55) && (Lat_Degrees < 64) && (Long_Degrees > -1) && (Long_Degrees < 3))
-            temp_zone = 31;
-        if ((Lat_Degrees > 55) && (Lat_Degrees < 64) && (Long_Degrees > 2) && (Long_Degrees < 12))
-            temp_zone = 32;
-        if ((Lat_Degrees > 71) && (Long_Degrees > -1) && (Long_Degrees < 9))
-            temp_zone = 31;
-        if ((Lat_Degrees > 71) && (Long_Degrees > 8) && (Long_Degrees < 21))
-            temp_zone = 33;
-        if ((Lat_Degrees > 71) && (Long_Degrees > 20) && (Long_Degrees < 33))
-            temp_zone = 35;
-        if ((Lat_Degrees > 71) && (Long_Degrees > 32) && (Long_Degrees < 42))
-            temp_zone = 37;
+        if ((Lat_Degrees > 55) && (Lat_Degrees < 64) && (Long_Degrees > -1) && (Long_Degrees < 3)) temp_zone = 31;
+        if ((Lat_Degrees > 55) && (Lat_Degrees < 64) && (Long_Degrees > 2) && (Long_Degrees < 12)) temp_zone = 32;
+        if ((Lat_Degrees > 71) && (Long_Degrees > -1) && (Long_Degrees < 9)) temp_zone = 31;
+        if ((Lat_Degrees > 71) && (Long_Degrees > 8) && (Long_Degrees < 21)) temp_zone = 33;
+        if ((Lat_Degrees > 71) && (Long_Degrees > 20) && (Long_Degrees < 33)) temp_zone = 35;
+        if ((Lat_Degrees > 71) && (Long_Degrees > 32) && (Long_Degrees < 42)) temp_zone = 37;
 
-        if (UTM_Override)
-        {
-            if ((temp_zone == 1) && (UTM_Override == 60))
-                temp_zone = UTM_Override;
+        if (UTM_Override) {
+            if ((temp_zone == 1) && (UTM_Override == 60)) temp_zone = UTM_Override;
             else if ((temp_zone == 60) && (UTM_Override == 1))
                 temp_zone = UTM_Override;
-            else if ((Lat_Degrees > 71) && (Long_Degrees > -1) && (Long_Degrees < 42))
-            {
-                if (((temp_zone - 2) <= UTM_Override) && (UTM_Override <= (temp_zone + 2)))
-                    temp_zone = UTM_Override;
+            else if ((Lat_Degrees > 71) && (Long_Degrees > -1) && (Long_Degrees < 42)) {
+                if (((temp_zone - 2) <= UTM_Override) && (UTM_Override <= (temp_zone + 2))) temp_zone = UTM_Override;
                 else
                     Error_Code = UTM_ZONE_OVERRIDE_ERROR;
-            }
-            else if (((temp_zone - 1) <= UTM_Override) && (UTM_Override <= (temp_zone + 1)))
+            } else if (((temp_zone - 1) <= UTM_Override) && (UTM_Override <= (temp_zone + 1)))
                 temp_zone = UTM_Override;
             else
                 Error_Code = UTM_ZONE_OVERRIDE_ERROR;
         }
-        if (!Error_Code)
-        {
-            if (temp_zone >= 31)
-                Central_Meridian = (6 * temp_zone - 183) * PI / 180.0;
+        if (!Error_Code) {
+            if (temp_zone >= 31) Central_Meridian = (6 * temp_zone - 183) * PI / 180.0;
             else
                 Central_Meridian = (6 * temp_zone + 177) * PI / 180.0;
             *Zone = temp_zone;
-            if (Latitude < 0)
-            {
+            if (Latitude < 0) {
                 False_Northing = 10000000;
                 *Hemisphere = 'S';
-            }
-            else
+            } else
                 *Hemisphere = 'N';
             Set_Transverse_Mercator_Parameters(UTM_a, UTM_f, Origin_Latitude, Central_Meridian, False_Easting,
                                                False_Northing, Scale);
             Convert_Geodetic_To_Transverse_Mercator(Latitude, Longitude, Easting, Northing);
-            if ((*Easting < MIN_EASTING) || (*Easting > MAX_EASTING))
-                Error_Code = UTM_EASTING_ERROR;
-            if ((*Northing < MIN_NORTHING) || (*Northing > MAX_NORTHING))
-                Error_Code |= UTM_NORTHING_ERROR;
+            if ((*Easting < MIN_EASTING) || (*Easting > MAX_EASTING)) Error_Code = UTM_EASTING_ERROR;
+            if ((*Northing < MIN_NORTHING) || (*Northing > MAX_NORTHING)) Error_Code |= UTM_NORTHING_ERROR;
         }
     } /* END OF if (!Error_Code) */
     return (Error_Code);
 } /* END OF Convert_Geodetic_To_UTM */
 
 long Convert_UTM_To_Geodetic(long Zone, char Hemisphere, double Easting, double Northing, double *Latitude,
-                             double *Longitude)
-{
+                             double *Longitude) {
     /*
      * The function Convert_UTM_To_Geodetic converts UTM projection (zone,
      * hemisphere, easting and northing) coordinates to geodetic(latitude
@@ -296,36 +264,25 @@ long Convert_UTM_To_Geodetic(long Zone, char Hemisphere, double Easting, double 
     double False_Northing = 0;
     double Scale = 0.9996;
 
-    if ((Zone < 1) || (Zone > 60))
-        Error_Code |= UTM_ZONE_ERROR;
-    if ((Hemisphere != 'S') && (Hemisphere != 'N'))
-        Error_Code |= UTM_HEMISPHERE_ERROR;
-    if ((Easting < MIN_EASTING) || (Easting > MAX_EASTING))
-        Error_Code |= UTM_EASTING_ERROR;
-    if ((Northing < MIN_NORTHING) || (Northing > MAX_NORTHING))
-        Error_Code |= UTM_NORTHING_ERROR;
-    if (!Error_Code)
-    { /* no errors */
-        if (Zone >= 31)
-            Central_Meridian = ((6 * Zone - 183) * PI / 180.0 /*+ 0.00000005*/);
+    if ((Zone < 1) || (Zone > 60)) Error_Code |= UTM_ZONE_ERROR;
+    if ((Hemisphere != 'S') && (Hemisphere != 'N')) Error_Code |= UTM_HEMISPHERE_ERROR;
+    if ((Easting < MIN_EASTING) || (Easting > MAX_EASTING)) Error_Code |= UTM_EASTING_ERROR;
+    if ((Northing < MIN_NORTHING) || (Northing > MAX_NORTHING)) Error_Code |= UTM_NORTHING_ERROR;
+    if (!Error_Code) { /* no errors */
+        if (Zone >= 31) Central_Meridian = ((6 * Zone - 183) * PI / 180.0 /*+ 0.00000005*/);
         else
             Central_Meridian = ((6 * Zone + 177) * PI / 180.0 /*+ 0.00000005*/);
-        if (Hemisphere == 'S')
-            False_Northing = 10000000;
+        if (Hemisphere == 'S') False_Northing = 10000000;
         Set_Transverse_Mercator_Parameters(UTM_a, UTM_f, Origin_Latitude, Central_Meridian, False_Easting,
                                            False_Northing, Scale);
 
         tm_error_code = Convert_Transverse_Mercator_To_Geodetic(Easting, Northing, Latitude, Longitude);
-        if (tm_error_code)
-        {
-            if (tm_error_code & TRANMERC_EASTING_ERROR)
-                Error_Code |= UTM_EASTING_ERROR;
-            if (tm_error_code & TRANMERC_NORTHING_ERROR)
-                Error_Code |= UTM_NORTHING_ERROR;
+        if (tm_error_code) {
+            if (tm_error_code & TRANMERC_EASTING_ERROR) Error_Code |= UTM_EASTING_ERROR;
+            if (tm_error_code & TRANMERC_NORTHING_ERROR) Error_Code |= UTM_NORTHING_ERROR;
         }
 
-        if ((*Latitude < MIN_LAT) || (*Latitude > MAX_LAT))
-        { /* Latitude out of range */
+        if ((*Latitude < MIN_LAT) || (*Latitude > MAX_LAT)) { /* Latitude out of range */
             Error_Code |= UTM_NORTHING_ERROR;
         }
     }

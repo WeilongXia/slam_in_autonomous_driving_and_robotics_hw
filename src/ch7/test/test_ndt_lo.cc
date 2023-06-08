@@ -15,13 +15,12 @@
 /// 测试以NDT为主的Lidar Odometry
 /// 若使用PCL NDT的话，会重新建立NDT树
 DEFINE_string(bag_path, "./dataset/sad/ulhk/test2.bag", "path to rosbag");
-DEFINE_string(dataset_type, "ULHK", "NCLT/ULHK/KITTI/WXB_3D"); // 数据集类型
+DEFINE_string(dataset_type, "ULHK", "NCLT/ULHK/KITTI/WXB_3D");  // 数据集类型
 DEFINE_bool(use_pcl_ndt, false, "use pcl ndt to align?");
 DEFINE_bool(use_ndt_nearby_6, false, "use ndt nearby 6?");
 DEFINE_bool(display_map, true, "display map?");
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = google::INFO;
     FLAGS_colorlogtostderr = true;
@@ -48,8 +47,7 @@ int main(int argc, char **argv)
         })
         .Go();
 
-    if (FLAGS_display_map)
-    {
+    if (FLAGS_display_map) {
         // 把地图存下来
         ndt_lo.SaveMap("./data/ch7/map.pcd");
     }

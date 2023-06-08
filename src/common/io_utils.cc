@@ -5,22 +5,28 @@
 
 #include <glog/logging.h>
 
-namespace sad {
+namespace sad
+{
 
-void TxtIO::Go() {
-    if (!fin) {
+void TxtIO::Go()
+{
+    if (!fin)
+    {
         LOG(ERROR) << "未能找到文件";
         return;
     }
 
-    while (!fin.eof()) {
+    while (!fin.eof())
+    {
         std::string line;
         std::getline(fin, line);
-        if (line.empty()) {
+        if (line.empty())
+        {
             continue;
         }
 
-        if (line[0] == '#') {
+        if (line[0] == '#')
+        {
             // 以#开头的是注释
             continue;
         }
@@ -31,16 +37,21 @@ void TxtIO::Go() {
         std::string data_type;
         ss >> data_type;
 
-        if (data_type == "IMU" && imu_proc_) {
+        if (data_type == "IMU" && imu_proc_)
+        {
             double time, gx, gy, gz, ax, ay, az;
             ss >> time >> gx >> gy >> gz >> ax >> ay >> az;
             // imu_proc_(IMU(time, Vec3d(gx, gy, gz) * math::kDEG2RAD, Vec3d(ax, ay, az)));
             imu_proc_(IMU(time, Vec3d(gx, gy, gz), Vec3d(ax, ay, az)));
-        } else if (data_type == "ODOM" && odom_proc_) {
+        }
+        else if (data_type == "ODOM" && odom_proc_)
+        {
             double time, wl, wr;
             ss >> time >> wl >> wr;
             odom_proc_(Odom(time, wl, wr));
-        } else if (data_type == "GNSS" && gnss_proc_) {
+        }
+        else if (data_type == "GNSS" && gnss_proc_)
+        {
             double time, lat, lon, alt, heading;
             bool heading_valid;
             ss >> time >> lat >> lon >> alt >> heading >> heading_valid;
@@ -51,41 +62,52 @@ void TxtIO::Go() {
     LOG(INFO) << "done.";
 }
 
-std::string RosbagIO::GetLidarTopicName() const {
-    if (dataset_type_ == DatasetType::NCLT) {
+std::string RosbagIO::GetLidarTopicName() const
+{
+    if (dataset_type_ == DatasetType::NCLT)
+    {
         return nclt_lidar_topic;
     }
-    if (dataset_type_ == DatasetType::ULHK) {
+    if (dataset_type_ == DatasetType::ULHK)
+    {
         return ulhk_lidar_topic;
     }
-    if (dataset_type_ == DatasetType::WXB_3D) {
+    if (dataset_type_ == DatasetType::WXB_3D)
+    {
         return wxb_lidar_topic;
     }
-    if (dataset_type_ == DatasetType::UTBM) {
+    if (dataset_type_ == DatasetType::UTBM)
+    {
         return utbm_lidar_topic;
     }
-    if (dataset_type_ == DatasetType::AVIA) {
+    if (dataset_type_ == DatasetType::AVIA)
+    {
         return avia_lidar_topic;
     }
 }
 
-void RosbagIO::Go() {
+void RosbagIO::Go()
+{
     rosbag::Bag bag(bag_file_);
     LOG(INFO) << "running in " << bag_file_ << ", reg process func: " << process_func_.size();
 
-    if (!bag.isOpen()) {
+    if (!bag.isOpen())
+    {
         LOG(ERROR) << "cannot open " << bag_file_;
         return;
     }
 
     auto view = rosbag::View(bag);
-    for (const rosbag::MessageInstance &m : view) {
+    for (const rosbag::MessageInstance &m : view)
+    {
         auto iter = process_func_.find(m.getTopic());
-        if (iter != process_func_.end()) {
+        if (iter != process_func_.end())
+        {
             iter->second(m);
         }
 
-        if (global::FLAG_EXIT) {
+        if (global::FLAG_EXIT)
+        {
             break;
         }
     }
@@ -94,22 +116,27 @@ void RosbagIO::Go() {
     LOG(INFO) << "bag " << bag_file_ << " finished.";
 }
 
-RosbagIO &RosbagIO::AddImuHandle(RosbagIO::ImuHandle f) {
+RosbagIO &RosbagIO::AddImuHandle(RosbagIO::ImuHandle f)
+{
     return AddHandle(GetIMUTopicName(), [&f, this](const rosbag::MessageInstance &m) -> bool {
         auto msg = m.template instantiate<sensor_msgs::Imu>();
-        if (msg == nullptr) {
+        if (msg == nullptr)
+        {
             return false;
         }
 
         IMUPtr imu;
-        if (dataset_type_ == DatasetType::AVIA) {
+        if (dataset_type_ == DatasetType::AVIA)
+        {
             // Livox内置imu的加计需要乘上重力常数
             imu =
                 std::make_shared<IMU>(msg->header.stamp.toSec(),
                                       Vec3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z),
                                       Vec3d(msg->linear_acceleration.x * 9.80665, msg->linear_acceleration.y * 9.80665,
                                             msg->linear_acceleration.z * 9.80665));
-        } else {
+        }
+        else
+        {
             imu = std::make_shared<IMU>(
                 msg->header.stamp.toSec(),
                 Vec3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z),
@@ -119,21 +146,33 @@ RosbagIO &RosbagIO::AddImuHandle(RosbagIO::ImuHandle f) {
     });
 }
 
-std::string RosbagIO::GetIMUTopicName() const {
-    if (dataset_type_ == DatasetType::ULHK) {
+std::string RosbagIO::GetIMUTopicName() const
+{
+    if (dataset_type_ == DatasetType::ULHK)
+    {
         return ulhk_imu_topic;
-    } else if (dataset_type_ == DatasetType::UTBM) {
+    }
+    else if (dataset_type_ == DatasetType::UTBM)
+    {
         return utbm_imu_topic;
-    } else if (dataset_type_ == DatasetType::NCLT) {
+    }
+    else if (dataset_type_ == DatasetType::NCLT)
+    {
         return nclt_imu_topic;
-    } else if (dataset_type_ == DatasetType::WXB_3D) {
+    }
+    else if (dataset_type_ == DatasetType::WXB_3D)
+    {
         return wxb_imu_topic;
-    } else if (dataset_type_ == DatasetType::AVIA) {
+    }
+    else if (dataset_type_ == DatasetType::AVIA)
+    {
         return avia_imu_topic;
-    } else {
+    }
+    else
+    {
         LOG(ERROR) << "cannot load imu topic name of dataset " << int(dataset_type_);
     }
 
     return "";
 }
-}  // namespace sad
+} // namespace sad
