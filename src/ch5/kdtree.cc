@@ -5,20 +5,25 @@
 #include "ch5/kdtree.h"
 #include "common/math_utils.h"
 
-#include <glog/logging.h>
 #include <execution>
+#include <glog/logging.h>
 #include <set>
 
-namespace sad {
 
-bool KdTree::BuildTree(const CloudPtr &cloud) {
-    if (cloud->empty()) {
+namespace sad
+{
+
+bool KdTree::BuildTree(const CloudPtr &cloud)
+{
+    if (cloud->empty())
+    {
         return false;
     }
 
     cloud_.clear();
     cloud_.resize(cloud->size());
-    for (size_t i = 0; i < cloud->points.size(); ++i) {
+    for (size_t i = 0; i < cloud->points.size(); ++i)
+    {
         cloud_[i] = ToVec3f(cloud->points[i]);
     }
 
@@ -26,7 +31,8 @@ bool KdTree::BuildTree(const CloudPtr &cloud) {
     Reset();
 
     IndexVec idx(cloud->size());
-    for (int i = 0; i < cloud->points.size(); ++i) {
+    for (int i = 0; i < cloud->points.size(); ++i)
+    {
         idx[i] = i;
     }
 
@@ -34,28 +40,33 @@ bool KdTree::BuildTree(const CloudPtr &cloud) {
     return true;
 }
 
-void KdTree::Insert(const IndexVec &points, KdTreeNode *node) {
+void KdTree::Insert(const IndexVec &points, KdTreeNode *node)
+{
     nodes_.insert({node->id_, node});
 
-    if (points.empty()) {
+    if (points.empty())
+    {
         return;
     }
 
-    if (points.size() == 1) {
+    if (points.size() == 1)
+    {
         size_++;
         node->point_idx_ = points[0];
         return;
     }
 
     IndexVec left, right;
-    if (!FindSplitAxisAndThresh(points, node->axis_index_, node->split_thresh_, left, right)) {
+    if (!FindSplitAxisAndThresh(points, node->axis_index_, node->split_thresh_, left, right))
+    {
         size_++;
         node->point_idx_ = points[0];
         return;
     }
 
     const auto create_if_not_empty = [&node, this](KdTreeNode *&new_node, const IndexVec &index) {
-        if (!index.empty()) {
+        if (!index.empty())
+        {
             new_node = new KdTreeNode;
             new_node->id_ = tree_node_id_++;
             Insert(index, new_node);
@@ -66,8 +77,10 @@ void KdTree::Insert(const IndexVec &points, KdTreeNode *node) {
     create_if_not_empty(node->right_, right);
 }
 
-bool KdTree::GetClosestPoint(const PointType &pt, std::vector<int> &closest_idx, int k) {
-    if (k > size_) {
+bool KdTree::GetClosestPoint(const PointType &pt, std::vector<int> &closest_idx, int k)
+{
+    if (k > size_)
+    {
         LOG(ERROR) << "cannot set k larger than cloud size: " << k << ", " << size_;
         return false;
     }
@@ -78,7 +91,8 @@ bool KdTree::GetClosestPoint(const PointType &pt, std::vector<int> &closest_idx,
 
     // 排序并返回结果
     closest_idx.resize(knn_result.size());
-    for (int i = closest_idx.size() - 1; i >= 0; --i) {
+    for (int i = closest_idx.size() - 1; i >= 0; --i)
+    {
         // 倒序插入
         closest_idx[i] = knn_result.top().node_->point_idx_;
         knn_result.pop();
@@ -86,23 +100,29 @@ bool KdTree::GetClosestPoint(const PointType &pt, std::vector<int> &closest_idx,
     return true;
 }
 
-bool KdTree::GetClosestPointMT(const CloudPtr &cloud, std::vector<std::pair<size_t, size_t>> &matches, int k) {
+bool KdTree::GetClosestPointMT(const CloudPtr &cloud, std::vector<std::pair<size_t, size_t>> &matches, int k)
+{
     matches.resize(cloud->size() * k);
 
     // 索引
     std::vector<int> index(cloud->size());
-    for (int i = 0; i < cloud->points.size(); ++i) {
+    for (int i = 0; i < cloud->points.size(); ++i)
+    {
         index[i] = i;
     }
 
     std::for_each(std::execution::par_unseq, index.begin(), index.end(), [this, &cloud, &matches, &k](int idx) {
         std::vector<int> closest_idx;
         GetClosestPoint(cloud->points[idx], closest_idx, k);
-        for (int i = 0; i < k; ++i) {
+        for (int i = 0; i < k; ++i)
+        {
             matches[idx * k + i].second = idx;
-            if (i < closest_idx.size()) {
+            if (i < closest_idx.size())
+            {
                 matches[idx * k + i].first = closest_idx[i];
-            } else {
+            }
+            else
+            {
                 matches[idx * k + i].first = math::kINVALID_ID;
             }
         }
@@ -111,8 +131,10 @@ bool KdTree::GetClosestPointMT(const CloudPtr &cloud, std::vector<std::pair<size
     return true;
 }
 
-void KdTree::Knn(const Vec3f &pt, KdTreeNode *node, std::priority_queue<NodeAndDistance> &knn_result) const {
-    if (node->IsLeaf()) {
+void KdTree::Knn(const Vec3f &pt, KdTreeNode *node, std::priority_queue<NodeAndDistance> &knn_result) const
+{
+    if (node->IsLeaf())
+    {
         // 如果是叶子，检查叶子是否能插入
         ComputeDisForLeaf(pt, node, knn_result);
         return;
@@ -121,60 +143,81 @@ void KdTree::Knn(const Vec3f &pt, KdTreeNode *node, std::priority_queue<NodeAndD
     // 看pt落在左还是右，优先搜索pt所在的子树
     // 然后再看另一侧子树是否需要搜索
     KdTreeNode *this_side, *that_side;
-    if (pt[node->axis_index_] < node->split_thresh_) {
+    if (pt[node->axis_index_] < node->split_thresh_)
+    {
         this_side = node->left_;
         that_side = node->right_;
-    } else {
+    }
+    else
+    {
         this_side = node->right_;
         that_side = node->left_;
     }
 
     Knn(pt, this_side, knn_result);
-    if (NeedExpand(pt, node, knn_result)) {  // 注意这里是跟自己比
+    if (NeedExpand(pt, node, knn_result))
+    { // 注意这里是跟自己比
         Knn(pt, that_side, knn_result);
     }
 }
 
-bool KdTree::NeedExpand(const Vec3f &pt, KdTreeNode *node, std::priority_queue<NodeAndDistance> &knn_result) const {
-    if (knn_result.size() < k_) {
+bool KdTree::NeedExpand(const Vec3f &pt, KdTreeNode *node, std::priority_queue<NodeAndDistance> &knn_result) const
+{
+    if (knn_result.size() < k_)
+    {
         return true;
     }
 
-    if (approximate_) {
+    if (approximate_)
+    {
         float d = pt[node->axis_index_] - node->split_thresh_;
-        if ((d * d) < knn_result.top().distance2_ * alpha_) {
+        if ((d * d) < knn_result.top().distance2_ * alpha_)
+        {
             return true;
-        } else {
+        }
+        else
+        {
             return false;
         }
-    } else {
+    }
+    else
+    {
         // 检测切面距离，看是否有比现在更小的
         float d = pt[node->axis_index_] - node->split_thresh_;
-        if ((d * d) < knn_result.top().distance2_) {
+        if ((d * d) < knn_result.top().distance2_)
+        {
             return true;
-        } else {
+        }
+        else
+        {
             return false;
         }
     }
 }
 
 void KdTree::ComputeDisForLeaf(const Vec3f &pt, KdTreeNode *node,
-                               std::priority_queue<NodeAndDistance> &knn_result) const {
+                               std::priority_queue<NodeAndDistance> &knn_result) const
+{
     // 比较与结果队列的差异，如果优于最远距离，则插入
     float dis2 = Dis2(pt, cloud_[node->point_idx_]);
-    if (knn_result.size() < k_) {
+    if (knn_result.size() < k_)
+    {
         // results 不足k
         knn_result.push({node, dis2});
-    } else {
+    }
+    else
+    {
         // results等于k，比较current与max_dis_iter之间的差异
-        if (dis2 < knn_result.top().distance2_) {
+        if (dis2 < knn_result.top().distance2_)
+        {
             knn_result.push({node, dis2});
             knn_result.pop();
         }
     }
 }
 
-bool KdTree::FindSplitAxisAndThresh(const IndexVec &point_idx, int &axis, float &th, IndexVec &left, IndexVec &right) {
+bool KdTree::FindSplitAxisAndThresh(const IndexVec &point_idx, int &axis, float &th, IndexVec &left, IndexVec &right)
+{
     // 计算三个轴上的散布情况，我们使用math_utils.h里的函数
     Vec3f var;
     Vec3f mean;
@@ -184,34 +227,43 @@ bool KdTree::FindSplitAxisAndThresh(const IndexVec &point_idx, int &axis, float 
     axis = max_i;
     th = mean[axis];
 
-    for (const auto &idx : point_idx) {
-        if (cloud_[idx][axis] < th) {
+    for (const auto &idx : point_idx)
+    {
+        if (cloud_[idx][axis] < th)
+        {
             // 中位数可能向左取整
             left.emplace_back(idx);
-        } else {
+        }
+        else
+        {
             right.emplace_back(idx);
         }
     }
 
     // 边界情况检查：输入的points等于同一个值，上面的判定是>=号，所以都进了右侧
     // 这种情况不需要继续展开，直接将当前节点设为叶子就行
-    if (point_idx.size() > 1 && (left.empty() || right.empty())) {
+    if (point_idx.size() > 1 && (left.empty() || right.empty()))
+    {
         return false;
     }
 
     return true;
 }
 
-void KdTree::Reset() {
+void KdTree::Reset()
+{
     tree_node_id_ = 0;
     root_.reset(new KdTreeNode());
     root_->id_ = tree_node_id_++;
     size_ = 0;
 }
 
-void KdTree::Clear() {
-    for (const auto &np : nodes_) {
-        if (np.second != root_.get()) {
+void KdTree::Clear()
+{
+    for (const auto &np : nodes_)
+    {
+        if (np.second != root_.get())
+        {
             delete np.second;
         }
     }
@@ -222,15 +274,20 @@ void KdTree::Clear() {
     tree_node_id_ = 0;
 }
 
-void KdTree::PrintAll() {
-    for (const auto &np : nodes_) {
+void KdTree::PrintAll()
+{
+    for (const auto &np : nodes_)
+    {
         auto node = np.second;
-        if (node->left_ == nullptr && node->right_ == nullptr) {
+        if (node->left_ == nullptr && node->right_ == nullptr)
+        {
             LOG(INFO) << "leaf node: " << node->id_ << ", idx: " << node->point_idx_;
-        } else {
+        }
+        else
+        {
             LOG(INFO) << "node: " << node->id_ << ", axis: " << node->axis_index_ << ", th: " << node->split_thresh_;
         }
     }
 }
 
-}  // namespace sad
+} // namespace sad

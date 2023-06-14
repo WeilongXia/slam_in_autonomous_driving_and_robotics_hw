@@ -10,7 +10,8 @@
 
 #include <thread>
 
-namespace sad {
+namespace sad
+{
 
 /**
  * Brute-force Nearest Neighbour
@@ -18,7 +19,7 @@ namespace sad {
  * @param point 待查找点
  * @return 找到的最近点索引
  */
-int bfnn_point(CloudPtr cloud, const Vec3f& point);
+int bfnn_point(CloudPtr cloud, const Vec3f &point);
 
 /**
  * Brute-force Nearest Neighbour, k近邻
@@ -27,7 +28,7 @@ int bfnn_point(CloudPtr cloud, const Vec3f& point);
  * @param k 近邻数
  * @return 找到的最近点索引
  */
-std::vector<int> bfnn_point_k(CloudPtr cloud, const Vec3f& point, int k = 5);
+std::vector<int> bfnn_point_k(CloudPtr cloud, const Vec3f &point, int k = 5);
 
 /**
  * 对点云进行BF最近邻
@@ -36,7 +37,7 @@ std::vector<int> bfnn_point_k(CloudPtr cloud, const Vec3f& point, int k = 5);
  * @param matches 两个点云内的匹配关系
  * @return
  */
-void bfnn_cloud(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, size_t>>& matches);
+void bfnn_cloud(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, size_t>> &matches);
 
 /**
  * 对点云进行BF最近邻 多线程版本
@@ -44,7 +45,7 @@ void bfnn_cloud(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, 
  * @param cloud2
  * @param matches
  */
-void bfnn_cloud_mt(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, size_t>>& matches);
+void bfnn_cloud_mt(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, size_t>> &matches);
 
 /**
  * 对点云进行BF最近邻 多线程版本，k近邻
@@ -52,7 +53,7 @@ void bfnn_cloud_mt(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_
  * @param cloud2
  * @param matches
  */
-void bfnn_cloud_mt_k(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, size_t>>& matches, int k = 5);
-}  // namespace sad
+void bfnn_cloud_mt_k(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, size_t>> &matches, int k = 5);
+} // namespace sad
 
-#endif  // SLAM_IN_AUTO_DRIVING_BFNN_H
+#endif // SLAM_IN_AUTO_DRIVING_BFNN_H
