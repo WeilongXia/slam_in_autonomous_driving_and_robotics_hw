@@ -8,7 +8,7 @@ ADD_EXECUTABLE(test_preintegration test_preintegration.cc)
 ADD_TEST(test_preintegration test_preintegration)
 
 target_link_libraries(test_preintegration
-        GTest::gtest pthread glog gflags ${PROJECT_NAME}.ch4 ${PROJECT_NAME}.ch3 ${PROJECT_NAME}.common
+        GTest::GTest pthread glog gflags ${PROJECT_NAME}.ch4 ${PROJECT_NAME}.ch3 ${PROJECT_NAME}.common
         )
 
 add_executable(run_gins_pre_integ run_gins_pre_integ.cc)
