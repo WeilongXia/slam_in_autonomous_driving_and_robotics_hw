@@ -9,7 +9,6 @@
 #include <glog/logging.h>
 #include <set>
 
-
 namespace sad
 {
 
@@ -73,6 +72,7 @@ void KdTree::Insert(const IndexVec &points, KdTreeNode *node)
         }
     };
 
+    // 建立左子树和右子树
     create_if_not_empty(node->left_, left);
     create_if_not_empty(node->right_, right);
 }
