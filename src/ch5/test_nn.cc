@@ -11,6 +11,8 @@
 #include "ch5/bfnn.h"
 #include "ch5/gridnn.hpp"
 #include "ch5/kdtree.h"
+#include "ch5/nano_tree.h"
+#include "ch5/nanoflann.hpp"
 #include "ch5/octo_tree.h"
 #include "common/point_cloud_utils.h"
 #include "common/point_types.h"
@@ -261,6 +263,31 @@ TEST(CH5_TEST, KDTREE_KNN)
     std::vector<std::pair<size_t, size_t>> matches;
     sad::evaluate_and_call([&first, &second, &kdtree, &matches]() { kdtree.GetClosestPointMT(second, matches, 5); },
                            "Kd Tree 5NN 多线程", 1);
+    EvaluateMatches(true_matches, matches);
+
+    LOG(INFO) << "building kdtree nanoflann";
+    // 对比nanoflann
+    NanoPointCloud first_cloud, second_cloud;
+    for (int i = 0; i < first->points.size(); ++i)
+    {
+        first_cloud.points.push_back(first->points[i]);
+    }
+    for (int i = 0; i < second->points.size(); ++i)
+    {
+        second_cloud.points.push_back(second->points[i]);
+    }
+    // 创建kd树
+    // 生成的index后续要用，evaluate_and_call中生成的生命周期有限，只是为了测试建树时长
+    NanoFlannKdTree kdtree_nanoflann(3, first_cloud);
+    sad::evaluate_and_call([&first_cloud]() { NanoFlannKdTree kdtree_nanoflann(3, first_cloud); }, "Kd Tree build", 1);
+
+    LOG(INFO) << "searching nanoflann";
+    matches.clear();
+
+    // nanoflannSearch(kdtree_nanoflann, 5, matches, second_cloud);
+    sad::evaluate_and_call([&]() { nanoflannSearch(kdtree_nanoflann, 5, matches, second_cloud); },
+                           "Kd Tree 5NN in NanoFlann", 1);
+
     EvaluateMatches(true_matches, matches);
 
     LOG(INFO) << "building kdtree pcl";
