@@ -8,11 +8,12 @@
 #include "ch6/lidar_2d_utils.h"
 #include "common/io_utils.h"
 
-DEFINE_string(bag_path, "./dataset/sad/2dmapping/test_2d_lidar.bag", "数据包路径");
+DEFINE_string(bag_path, "../dataset/2dmapping/floor1.bag", "数据包路径");
 
 /// 测试从rosbag中读取2d scan并plot的结果
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = google::INFO;
     FLAGS_colorlogtostderr = true;
