@@ -10,12 +10,13 @@
 #include "common/io_utils.h"
 #include "common/sys_utils.h"
 
-DEFINE_string(bag_path, "./dataset/sad/2dmapping/floor1.bag", "数据包路径");
+DEFINE_string(bag_path, "../dataset/2dmapping/floor1.bag", "数据包路径");
 DEFINE_string(method, "model/bresenham", "填充算法：model/bresenham");
 
 /// 测试2D似然场法的ICP
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = google::INFO;
     FLAGS_colorlogtostderr = true;
@@ -28,14 +29,17 @@ int main(int argc, char** argv) {
         .AddScan2DHandle("/pavo_scan_bottom",
                          [&](Scan2d::Ptr scan) {
                              sad::OccupancyMap oc_map;
-                             if (FLAGS_method == "model") {
+                             if (FLAGS_method == "model")
+                             {
                                  sad::evaluate_and_call(
                                      [&]() {
                                          oc_map.AddLidarFrame(std::make_shared<sad::Frame>(scan),
                                                               sad::OccupancyMap::GridMethod::MODEL_POINTS);
                                      },
                                      "Occupancy with model points");
-                             } else {
+                             }
+                             else
+                             {
                                  sad::evaluate_and_call(
                                      [&]() {
                                          oc_map.AddLidarFrame(std::make_shared<sad::Frame>(scan),

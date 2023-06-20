@@ -9,12 +9,13 @@
 #include "ch6/lidar_2d_utils.h"
 #include "common/io_utils.h"
 
-DEFINE_string(bag_path, "./dataset/sad/2dmapping/floor1.bag", "数据包路径");
+DEFINE_string(bag_path, "../dataset/2dmapping/floor1.bag", "数据包路径");
 DEFINE_string(method, "point2point", "2d icp方法：point2point/point2plane");
 
 /// 测试从rosbag中读取2d scan并plot的结果
 /// 通过选择method来确定使用点到点或点到面的ICP
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = google::INFO;
     FLAGS_colorlogtostderr = true;
@@ -29,7 +30,8 @@ int main(int argc, char** argv) {
                          [&](Scan2d::Ptr scan) {
                              current_scan = scan;
 
-                             if (last_scan == nullptr) {
+                             if (last_scan == nullptr)
+                             {
                                  last_scan = current_scan;
                                  return true;
                              }
@@ -39,15 +41,26 @@ int main(int argc, char** argv) {
                              icp.SetSource(current_scan);
 
                              SE2 pose;
-                             if (fLS::FLAGS_method == "point2point") {
+                             if (fLS::FLAGS_method == "point2point")
+                             {
                                  icp.AlignGaussNewton(pose);
-                             } else if (fLS::FLAGS_method == "point2plane") {
+                             }
+                             else if (fLS::FLAGS_method == "point2point_g2o")
+                             {
+                                 icp.AlignPoint2PointG2O(pose);
+                             }
+                             else if (fLS::FLAGS_method == "point2plane")
+                             {
                                  icp.AlignGaussNewtonPoint2Plane(pose);
+                             }
+                             else if (fLS::FLAGS_method == "point2plane_g2o")
+                             {
+                                 icp.AlignPoint2PlaneG2O(pose);
                              }
 
                              cv::Mat image;
-                             sad::Visualize2DScan(last_scan, SE2(), image, Vec3b(255, 0, 0));    // target是蓝的
-                             sad::Visualize2DScan(current_scan, pose, image, Vec3b(0, 0, 255));  // source是红的
+                             sad::Visualize2DScan(last_scan, SE2(), image, Vec3b(255, 0, 0));   // target是蓝的
+                             sad::Visualize2DScan(current_scan, pose, image, Vec3b(0, 0, 255)); // source是红的
                              cv::imshow("scan", image);
                              cv::waitKey(20);
 

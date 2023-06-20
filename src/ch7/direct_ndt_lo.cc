@@ -8,10 +8,13 @@
 
 #include <pcl/common/transforms.h>
 
-namespace sad {
+namespace sad
+{
 
-void DirectNDTLO::AddCloud(CloudPtr scan, SE3& pose) {
-    if (local_map_ == nullptr) {
+void DirectNDTLO::AddCloud(CloudPtr scan, SE3 &pose)
+{
+    if (local_map_ == nullptr)
+    {
         // 第一个帧，直接加入local map
         local_map_.reset(new PointCloudType);
         // operator += 用来拼接点云
@@ -19,9 +22,12 @@ void DirectNDTLO::AddCloud(CloudPtr scan, SE3& pose) {
         pose = SE3();
         last_kf_pose_ = pose;
 
-        if (options_.use_pcl_ndt_) {
+        if (options_.use_pcl_ndt_)
+        {
             ndt_pcl_.setInputTarget(local_map_);
-        } else {
+        }
+        else
+        {
             ndt_.SetTarget(local_map_);
         }
 
@@ -33,43 +39,55 @@ void DirectNDTLO::AddCloud(CloudPtr scan, SE3& pose) {
     CloudPtr scan_world(new PointCloudType);
     pcl::transformPointCloud(*scan, *scan_world, pose.matrix().cast<float>());
 
-    if (IsKeyframe(pose)) {
+    if (IsKeyframe(pose))
+    {
         last_kf_pose_ = pose;
 
         // 重建local map
         scans_in_local_map_.emplace_back(scan_world);
-        if (scans_in_local_map_.size() > options_.num_kfs_in_local_map_) {
+        if (scans_in_local_map_.size() > options_.num_kfs_in_local_map_)
+        {
             scans_in_local_map_.pop_front();
         }
 
         local_map_.reset(new PointCloudType);
-        for (auto& scan : scans_in_local_map_) {
+        for (auto &scan : scans_in_local_map_)
+        {
             *local_map_ += *scan;
         }
 
-        if (options_.use_pcl_ndt_) {
+        if (options_.use_pcl_ndt_)
+        {
             ndt_pcl_.setInputTarget(local_map_);
-        } else {
+        }
+        else
+        {
             ndt_.SetTarget(local_map_);
         }
     }
 
-    if (viewer_ != nullptr) {
+    if (viewer_ != nullptr)
+    {
         viewer_->SetPoseAndCloud(pose, scan_world);
     }
 }
 
-bool DirectNDTLO::IsKeyframe(const SE3& current_pose) {
+bool DirectNDTLO::IsKeyframe(const SE3 &current_pose)
+{
     // 只要与上一帧相对运动超过一定距离或角度，就记关键帧
     SE3 delta = last_kf_pose_.inverse() * current_pose;
     return delta.translation().norm() > options_.kf_distance_ ||
            delta.so3().log().norm() > options_.kf_angle_deg_ * math::kDEG2RAD;
 }
 
-SE3 DirectNDTLO::AlignWithLocalMap(CloudPtr scan) {
-    if (options_.use_pcl_ndt_) {
+SE3 DirectNDTLO::AlignWithLocalMap(CloudPtr scan)
+{
+    if (options_.use_pcl_ndt_)
+    {
         ndt_pcl_.setInputSource(scan);
-    } else {
+    }
+    else
+    {
         ndt_.SetSource(scan);
     }
 
@@ -77,23 +95,32 @@ SE3 DirectNDTLO::AlignWithLocalMap(CloudPtr scan) {
 
     SE3 guess;
     bool align_success = true;
-    if (estimated_poses_.size() < 2) {
-        if (options_.use_pcl_ndt_) {
+    if (estimated_poses_.size() < 2)
+    {
+        if (options_.use_pcl_ndt_)
+        {
             ndt_pcl_.align(*output, guess.matrix().cast<float>());
             guess = Mat4ToSE3(ndt_pcl_.getFinalTransformation().cast<double>().eval());
-        } else {
+        }
+        else
+        {
             align_success = ndt_.AlignNdt(guess);
         }
-    } else {
+    }
+    else
+    {
         // 从最近两个pose来推断
         SE3 T1 = estimated_poses_[estimated_poses_.size() - 1];
         SE3 T2 = estimated_poses_[estimated_poses_.size() - 2];
         guess = T1 * (T2.inverse() * T1);
 
-        if (options_.use_pcl_ndt_) {
+        if (options_.use_pcl_ndt_)
+        {
             ndt_pcl_.align(*output, guess.matrix().cast<float>());
             guess = Mat4ToSE3(ndt_pcl_.getFinalTransformation().cast<double>().eval());
-        } else {
+        }
+        else
+        {
             align_success = ndt_.AlignNdt(guess);
         }
     }
@@ -101,7 +128,8 @@ SE3 DirectNDTLO::AlignWithLocalMap(CloudPtr scan) {
     LOG(INFO) << "pose: " << guess.translation().transpose() << ", "
               << guess.so3().unit_quaternion().coeffs().transpose();
 
-    if (options_.use_pcl_ndt_) {
+    if (options_.use_pcl_ndt_)
+    {
         LOG(INFO) << "trans prob: " << ndt_pcl_.getTransformationProbability();
     }
 
@@ -109,10 +137,12 @@ SE3 DirectNDTLO::AlignWithLocalMap(CloudPtr scan) {
     return guess;
 }
 
-void DirectNDTLO::SaveMap(const std::string& map_path) {
-    if (viewer_) {
+void DirectNDTLO::SaveMap(const std::string &map_path)
+{
+    if (viewer_)
+    {
         viewer_->SaveMap(map_path);
     }
 }
 
-}  // namespace sad
+} // namespace sad

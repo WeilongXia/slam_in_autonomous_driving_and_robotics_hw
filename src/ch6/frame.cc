@@ -4,26 +4,31 @@
 
 #include "frame.h"
 
-#include <glog/logging.h>
 #include <fstream>
+#include <glog/logging.h>
 
-namespace sad {
+namespace sad
+{
 
-void Frame::Dump(const std::string& filename) {
+void Frame::Dump(const std::string &filename)
+{
     std::ofstream fout(filename);
     fout << id_ << " " << keyframe_id_ << " " << timestamp_ << std::endl;
     fout << pose_.translation()[0] << " " << pose_.translation()[1] << " " << pose_.so2().log() << std::endl;
     fout << scan_->angle_min << " " << scan_->angle_max << " " << scan_->angle_increment << " " << scan_->range_min
          << " " << scan_->range_max << " " << scan_->ranges.size() << std::endl;
-    for (auto& r : scan_->ranges) {
+    for (auto &r : scan_->ranges)
+    {
         fout << r << " ";
     }
     fout.close();
 }
 
-void Frame::Load(const std::string& filename) {
+void Frame::Load(const std::string &filename)
+{
     std::ifstream fin(filename);
-    if (!fin) {
+    if (!fin)
+    {
         LOG(ERROR) << "cannot load from " << filename;
         return;
     }
@@ -37,11 +42,12 @@ void Frame::Load(const std::string& filename) {
 
     int range_size;
     fin >> range_size;
-    for (int i = 0; i < range_size; ++i) {
+    for (int i = 0; i < range_size; ++i)
+    {
         double r;
         fin >> r;
         scan_->ranges.emplace_back(r);
     }
 }
 
-}  // namespace sad
+} // namespace sad
