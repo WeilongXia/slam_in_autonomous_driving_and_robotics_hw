@@ -27,9 +27,9 @@ void OccupancyMap::BuildModel()
             Model2DPoint pt;
             pt.dx_ = x;
             pt.dy_ = y;
-            pt.range_ = sqrt(x * x + y * y) * inv_resolution_;
+            pt.range_ = sqrt(x * x + y * y) * inv_resolution_; // inv_resolution代表1个像素多少米，这里1个像素0.05m
             pt.angle_ = std::atan2(y, x);
-            pt.angle_ = pt.angle_ > M_PI ? pt.angle_ - 2 * M_PI : pt.angle_; // limit in 2pi
+            pt.angle_ = pt.angle_ > M_PI ? pt.angle_ - 2 * M_PI : pt.angle_; // limit in -pi ~ pi
             model_.push_back(pt);
         }
     }
