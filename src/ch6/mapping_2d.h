@@ -12,7 +12,8 @@
 #include <memory>
 #include <opencv2/core.hpp>
 
-namespace sad {
+namespace sad
+{
 
 class Submap;
 class LoopClosing;
@@ -20,8 +21,9 @@ class LoopClosing;
 /**
  * 2D 激光建图的主要类
  */
-class Mapping2D {
-   public:
+class Mapping2D
+{
+  public:
     bool Init(bool with_loop_closing = true);
 
     /// 单回波的scan
@@ -38,7 +40,7 @@ class Mapping2D {
      */
     cv::Mat ShowGlobalMap(int max_size = 500);
 
-   private:
+  private:
     /// 判定当前帧是否为关键帧
     bool IsKeyFrame();
 
@@ -62,13 +64,13 @@ class Mapping2D {
 
     std::vector<std::shared_ptr<Submap>> all_submaps_;
 
-    std::shared_ptr<LoopClosing> loop_closing_ = nullptr;  // 回环检测
+    std::shared_ptr<LoopClosing> loop_closing_ = nullptr; // 回环检测
 
     // 参数
-    inline static constexpr double keyframe_pos_th_ = 0.3;              // 关键帧位移量
-    inline static constexpr double keyframe_ang_th_ = 15 * M_PI / 180;  // 关键帧角度量
+    inline static constexpr double keyframe_pos_th_ = 0.3;             // 关键帧位移量
+    inline static constexpr double keyframe_ang_th_ = 15 * M_PI / 180; // 关键帧角度量
 };
 
-}  // namespace sad
+} // namespace sad
 
-#endif  // SLAM_IN_AUTO_DRIVING_MAPPING_2D_H
+#endif // SLAM_IN_AUTO_DRIVING_MAPPING_2D_H
