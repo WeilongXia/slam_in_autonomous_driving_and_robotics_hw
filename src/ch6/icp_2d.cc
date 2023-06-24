@@ -144,6 +144,76 @@ bool Icp2d::AlignGaussNewtonPoint2Plane(SE2 &init_pose)
     const float max_dis = 0.3;     // 最近邻时的最远距离
     const int min_effect_pts = 20; // 最小有效点数
 
+    // // 遍历source，使用直线拟合查看scan是否退化
+    // std::vector<Vec2d> ab_coeffs;
+    // for (size_t i = 0; i < source_scan_->ranges.size(); ++i)
+    // {
+    //     float r = source_scan_->ranges[i];
+    //     if (r < source_scan_->range_min || r > source_scan_->range_max)
+    //     {
+    //         continue;
+    //     }
+
+    //     float angle = source_scan_->angle_min + i * source_scan_->angle_increment;
+    //     float theta = current_pose.so2().log();
+    //     Vec2d pw = current_pose * Vec2d(r * std::cos(angle), r * std::sin(angle));
+    //     Point2d pt;
+    //     pt.x = pw.x();
+    //     pt.y = pw.y();
+
+    //     // 查找5个最近邻
+    //     std::vector<int> nn_idx;
+    //     std::vector<float> dis;
+    //     kdtree_.nearestKSearch(pt, 5, nn_idx, dis);
+
+    //     std::vector<Vec2d> effective_pts; // 有效点
+    //     for (int j = 0; j < nn_idx.size(); ++j)
+    //     {
+    //         if (dis[j] < max_dis)
+    //         {
+    //             effective_pts.emplace_back(
+    //                 Vec2d(target_cloud_->points[nn_idx[j]].x, target_cloud_->points[nn_idx[j]].y));
+    //         }
+    //     }
+
+    //     if (effective_pts.size() < 3)
+    //     {
+    //         continue;
+    //     }
+
+    //     // 拟合直线
+    //     Vec3d line_coeffs;
+    //     if (math::FitLine2D(effective_pts, line_coeffs))
+    //     {
+    //         ab_coeffs.emplace_back(Vec2d(line_coeffs[0], line_coeffs[1]));
+    //     }
+    // }
+    // // 进行SVD分解，利用特征值大小判断scan是否退化
+    // Eigen::MatrixXd A(ab_coeffs.size(), 2);
+    // for (size_t i = 0; i < ab_coeffs.size(); ++i)
+    // {
+    //     A.block(i, 0, 1, 2) << ab_coeffs[i][0], ab_coeffs[i][1];
+    // }
+    // Eigen::JacobiSVD<Eigen::MatrixXd> svd(A * A.transpose(), Eigen::ComputeFullU | Eigen::ComputeFullV);
+    // double sum_sing_val = 0.0;
+    // std::cout << "A矩阵奇异值为： \n";
+    // for (size_t i = 0; i < svd.singularValues().size(); ++i)
+    // {
+    //     if (svd.singularValues()[i] > 0.05)
+    //     {
+    //         std::cout << svd.singularValues()[i] << std::endl;
+    //     }
+    //     sum_sing_val += svd.singularValues()[i];
+    // }
+    // if (svd.singularValues()[0] / sum_sing_val >= 0.95)
+    // {
+    //     std::cout << "退化的scan!!! 最大奇异值占比" << svd.singularValues()[0] / sum_sing_val << std::endl;
+    // }
+    // else
+    // {
+    //     std::cout << "并未退化，最大奇异值占比" << svd.singularValues()[0] / sum_sing_val << std::endl;
+    // }
+
     for (int iter = 0; iter < iterations; ++iter)
     {
         Mat3d H = Mat3d::Zero();
