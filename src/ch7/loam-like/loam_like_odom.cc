@@ -10,11 +10,14 @@
 
 #include <execution>
 
-namespace sad {
+namespace sad
+{
 
 LoamLikeOdom::LoamLikeOdom(LoamLikeOdom::Options options)
-    : options_(options), feature_extraction_(new FeatureExtraction), global_map_(new PointCloudType()) {
-    if (options_.display_realtime_cloud_) {
+    : options_(options), feature_extraction_(new FeatureExtraction), global_map_(new PointCloudType())
+{
+    if (options_.display_realtime_cloud_)
+    {
         viewer_ = std::make_shared<PCLMapViewer>(0.1);
     }
 
@@ -22,20 +25,23 @@ LoamLikeOdom::LoamLikeOdom(LoamLikeOdom::Options options)
     kdtree_surf_.SetEnableANN();
 }
 
-void LoamLikeOdom::ProcessPointCloud(FullCloudPtr cloud) {
+void LoamLikeOdom::ProcessPointCloud(FullCloudPtr cloud)
+{
     LOG(INFO) << "processing frame " << cnt_frame_++;
     // step 1. 提特征
     CloudPtr current_edge(new PointCloudType), current_surf(new PointCloudType);
     feature_extraction_->Extract(cloud, current_edge, current_surf);
 
-    if (current_edge->size() < options_.min_edge_pts_ || current_surf->size() < options_.min_surf_pts_) {
+    if (current_edge->size() < options_.min_edge_pts_ || current_surf->size() < options_.min_surf_pts_)
+    {
         LOG(ERROR) << "not enough edge/surf pts: " << current_edge->size() << "," << current_surf->size();
         return;
     }
 
     LOG(INFO) << "edge: " << current_edge->size() << ", surf: " << current_surf->size();
 
-    if (local_map_edge_ == nullptr || local_map_surf_ == nullptr) {
+    if (local_map_edge_ == nullptr || local_map_surf_ == nullptr)
+    {
         // 首帧特殊处理
         local_map_edge_ = current_edge;
         local_map_surf_ = current_surf;
@@ -57,7 +63,8 @@ void LoamLikeOdom::ProcessPointCloud(FullCloudPtr cloud) {
     pcl::transformPointCloud(*current_edge, *edge_world, pose.matrix());
     pcl::transformPointCloud(*current_surf, *surf_world, pose.matrix());
 
-    if (IsKeyframe(pose)) {
+    if (IsKeyframe(pose))
+    {
         LOG(INFO) << "inserting keyframe";
         last_kf_pose_ = pose;
         last_kf_id_ = cnt_frame_;
@@ -66,20 +73,24 @@ void LoamLikeOdom::ProcessPointCloud(FullCloudPtr cloud) {
         edges_.emplace_back(edge_world);
         surfs_.emplace_back(surf_world);
 
-        if (edges_.size() > options_.num_kfs_in_local_map_) {
+        if (edges_.size() > options_.num_kfs_in_local_map_)
+        {
             edges_.pop_front();
         }
-        if (surfs_.size() > options_.num_kfs_in_local_map_) {
+        if (surfs_.size() > options_.num_kfs_in_local_map_)
+        {
             surfs_.pop_front();
         }
 
         local_map_surf_.reset(new PointCloudType);
         local_map_edge_.reset(new PointCloudType);
 
-        for (auto& s : edges_) {
+        for (auto &s : edges_)
+        {
             *local_map_edge_ += *s;
         }
-        for (auto& s : surfs_) {
+        for (auto &s : surfs_)
+        {
             *local_map_surf_ += *s;
         }
 
@@ -98,13 +109,16 @@ void LoamLikeOdom::ProcessPointCloud(FullCloudPtr cloud) {
     LOG(INFO) << "current pose: " << pose.translation().transpose() << ", "
               << pose.so3().unit_quaternion().coeffs().transpose();
 
-    if (viewer_ != nullptr) {
+    if (viewer_ != nullptr)
+    {
         viewer_->SetPoseAndCloud(pose, scan_world);
     }
 }
 
-bool LoamLikeOdom::IsKeyframe(const SE3& current_pose) {
-    if ((cnt_frame_ - last_kf_id_) > 30) {
+bool LoamLikeOdom::IsKeyframe(const SE3 &current_pose)
+{
+    if ((cnt_frame_ - last_kf_id_) > 30)
+    {
         return true;
     }
 
@@ -114,10 +128,12 @@ bool LoamLikeOdom::IsKeyframe(const SE3& current_pose) {
            delta.so3().log().norm() > options_.kf_angle_deg_ * math::kDEG2RAD;
 }
 
-SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
+SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf)
+{
     // 这部分的ICP需要自己写
     SE3 pose;
-    if (estimated_poses_.size() >= 2) {
+    if (estimated_poses_.size() >= 2)
+    {
         // 从最近两个pose来推断
         SE3 T1 = estimated_poses_[estimated_poses_.size() - 1];
         SE3 T2 = estimated_poses_[estimated_poses_.size() - 2];
@@ -128,23 +144,25 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
     int surf_size = surf->size();
 
     // 我们来写一些并发代码
-    for (int iter = 0; iter < options_.max_iteration_; ++iter) {
+    for (int iter = 0; iter < options_.max_iteration_; ++iter)
+    {
         std::vector<bool> effect_surf(surf_size, false);
-        std::vector<Eigen::Matrix<double, 1, 6>> jacob_surf(surf_size);  // 点面的残差是1维的
+        std::vector<Eigen::Matrix<double, 1, 6>> jacob_surf(surf_size); // 点面的残差是1维的
         std::vector<double> errors_surf(surf_size);
 
         std::vector<bool> effect_edge(edge_size, false);
-        std::vector<Eigen::Matrix<double, 3, 6>> jacob_edge(edge_size);  // 点线的残差是3维的
+        std::vector<Eigen::Matrix<double, 3, 6>> jacob_edge(edge_size); // 点线的残差是3维的
         std::vector<Vec3d> errors_edge(edge_size);
 
         std::vector<int> index_surf(surf_size);
-        std::iota(index_surf.begin(), index_surf.end(), 0);  // 填入
+        std::iota(index_surf.begin(), index_surf.end(), 0); // 填入
         std::vector<int> index_edge(edge_size);
-        std::iota(index_edge.begin(), index_edge.end(), 0);  // 填入
+        std::iota(index_edge.begin(), index_edge.end(), 0); // 填入
 
         // gauss-newton 迭代
         // 最近邻，角点部分
-        if (options_.use_edge_points_) {
+        if (options_.use_edge_points_)
+        {
             std::for_each(std::execution::par_unseq, index_edge.begin(), index_edge.end(), [&](int idx) {
                 Vec3d q = ToVec3d(edge->points[idx]);
                 Vec3d qs = pose * q;
@@ -155,20 +173,24 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
                 kdtree_edge_.GetClosestPoint(ToPointType(qs), nn_indices, 5);
                 effect_edge[idx] = false;
 
-                if (nn_indices.size() >= 3) {
+                if (nn_indices.size() >= 3)
+                {
                     std::vector<Vec3d> nn_eigen;
-                    for (auto& n : nn_indices) {
+                    for (auto &n : nn_indices)
+                    {
                         nn_eigen.emplace_back(ToVec3d(local_map_edge_->points[n]));
                     }
 
                     // point to point residual
                     Vec3d d, p0;
-                    if (!math::FitLine(nn_eigen, p0, d, options_.max_line_distance_)) {
+                    if (!math::FitLine(nn_eigen, p0, d, options_.max_line_distance_))
+                    {
                         return;
                     }
 
                     Vec3d err = SO3::hat(d) * (qs - p0);
-                    if (err.norm() > options_.max_line_distance_) {
+                    if (err.norm() > options_.max_line_distance_)
+                    {
                         return;
                     }
 
@@ -186,7 +208,8 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
         }
 
         /// 最近邻，平面点部分
-        if (options_.use_surf_points_) {
+        if (options_.use_surf_points_)
+        {
             std::for_each(std::execution::par_unseq, index_surf.begin(), index_surf.end(), [&](int idx) {
                 Vec3d q = ToVec3d(surf->points[idx]);
                 Vec3d qs = pose * q;
@@ -197,20 +220,24 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
                 kdtree_surf_.GetClosestPoint(ToPointType(qs), nn_indices, 5);
                 effect_surf[idx] = false;
 
-                if (nn_indices.size() == 5) {
+                if (nn_indices.size() == 5)
+                {
                     std::vector<Vec3d> nn_eigen;
-                    for (auto& n : nn_indices) {
+                    for (auto &n : nn_indices)
+                    {
                         nn_eigen.emplace_back(ToVec3d(local_map_surf_->points[n]));
                     }
 
                     // 点面残差
                     Vec4d n;
-                    if (!math::FitPlane(nn_eigen, n)) {
+                    if (!math::FitPlane(nn_eigen, n))
+                    {
                         return;
                     }
 
                     double dis = n.head<3>().dot(qs) + n[3];
-                    if (fabs(dis) > options_.max_plane_distance_) {
+                    if (fabs(dis) > options_.max_plane_distance_)
+                    {
                         return;
                     }
 
@@ -235,8 +262,10 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
         Mat6d H = Mat6d::Zero();
         Vec6d err = Vec6d::Zero();
 
-        for (const auto& idx : index_surf) {
-            if (effect_surf[idx]) {
+        for (const auto &idx : index_surf)
+        {
+            if (effect_surf[idx])
+            {
                 H += jacob_surf[idx].transpose() * jacob_surf[idx];
                 err += -jacob_surf[idx].transpose() * errors_surf[idx];
                 effective_num++;
@@ -244,8 +273,10 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
             }
         }
 
-        for (const auto& idx : index_edge) {
-            if (effect_edge[idx]) {
+        for (const auto &idx : index_edge)
+        {
+            if (effect_edge[idx])
+            {
                 H += jacob_edge[idx].transpose() * jacob_edge[idx];
                 err += -jacob_edge[idx].transpose() * errors_edge[idx];
                 effective_num++;
@@ -253,7 +284,8 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
             }
         }
 
-        if (effective_num < options_.min_effective_pts_) {
+        if (effective_num < options_.min_effective_pts_)
+        {
             LOG(WARNING) << "effective num too small: " << effective_num;
             return pose;
         }
@@ -266,7 +298,8 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
         LOG(INFO) << "iter " << iter << " total res: " << total_res << ", eff: " << effective_num
                   << ", mean res: " << total_res / effective_num << ", dxn: " << dx.norm();
 
-        if (dx.norm() < options_.eps_) {
+        if (dx.norm() < options_.eps_)
+        {
             LOG(INFO) << "converged, dx = " << dx.transpose();
             break;
         }
@@ -276,10 +309,12 @@ SE3 LoamLikeOdom::AlignWithLocalMap(CloudPtr edge, CloudPtr surf) {
     return pose;
 }
 
-void LoamLikeOdom::SaveMap(const std::string& path) {
-    if (global_map_ && global_map_->empty() == false) {
+void LoamLikeOdom::SaveMap(const std::string &path)
+{
+    if (global_map_ && global_map_->empty() == false)
+    {
         sad::SaveCloudToFile(path, *global_map_);
     }
 }
 
-}  // namespace sad
+} // namespace sad

@@ -7,23 +7,32 @@
 
 #include "common/point_types.h"
 
-namespace sad {
+namespace sad
+{
 
 /**
  * 根据线束信息来提取特征
  * 需要知道雷达的线数分布，目前只支持velodyne的雷达
  */
-class FeatureExtraction {
+class FeatureExtraction
+{
     /// 一个线ID+曲率的结构
-    struct IdAndValue {
-        IdAndValue() {}
-        IdAndValue(int id, double value) : id_(id), value_(value) {}
+    struct IdAndValue
+    {
+        IdAndValue()
+        {
+        }
+        IdAndValue(int id, double value) : id_(id), value_(value)
+        {
+        }
         int id_ = 0;
-        double value_ = 0;  // 曲率
+        double value_ = 0; // 曲率
     };
 
-   public:
-    FeatureExtraction() {}
+  public:
+    FeatureExtraction()
+    {
+    }
 
     /**
      * 提取角点和平面点
@@ -40,12 +49,12 @@ class FeatureExtraction {
      * @param pc_out_edge
      * @param pc_out_surf
      */
-    void ExtractFromSector(const CloudPtr& pc_in, std::vector<IdAndValue>& cloud_curvature, CloudPtr& pc_out_edge,
-                           CloudPtr& pc_out_surf);
+    void ExtractFromSector(const CloudPtr &pc_in, std::vector<IdAndValue> &cloud_curvature, CloudPtr &pc_out_edge,
+                           CloudPtr &pc_out_surf);
 
-   private:
+  private:
 };
 
-}  // namespace sad
+} // namespace sad
 
-#endif  // SLAM_IN_AUTO_DRIVING_FEATURE_EXTRACTION_H
+#endif // SLAM_IN_AUTO_DRIVING_FEATURE_EXTRACTION_H

@@ -9,11 +9,12 @@
 #include "common/io_utils.h"
 #include "common/timer/timer.h"
 
-DEFINE_string(bag_path, "./dataset/sad/wxb/test1.bag", "path to wxb bag");
+DEFINE_string(bag_path, "../dataset/sad/wxb/test1.bag", "path to wxb bag");
 DEFINE_string(topic, "/velodyne_packets_1", "topic of lidar packets");
 DEFINE_bool(display_map, true, "display map?");
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = google::INFO;
     FLAGS_colorlogtostderr = true;
@@ -34,7 +35,7 @@ int main(int argc, char** argv) {
                            })
         .Go();
 
-    lo.SaveMap("./data/ch7/loam_map.pcd");
+    lo.SaveMap("../data/ch7/loam_map.pcd");
 
     sad::common::Timer::PrintAll();
     LOG(INFO) << "done.";
