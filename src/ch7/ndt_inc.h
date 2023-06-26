@@ -91,7 +91,7 @@ class IncNdt3d
         return grids_.size();
     }
 
-    /// 在voxel里添加点云，
+    /// 在voxel里添加点云
     void AddCloud(CloudPtr cloud_world);
 
     /// 设置被配准的Scan

@@ -13,7 +13,8 @@
 
 #include "tools/ui/pangolin_window.h"
 
-namespace sad {
+namespace sad
+{
 
 /**
  * 7.5 节实现的松耦合LIO程序
@@ -23,13 +24,17 @@ namespace sad {
  * 由于是第一个有IMU和雷达的程序，框架变动较大
  * 后续紧耦合LIO将继续使用本框架
  */
-class LooselyLIO {
-   public:
+class LooselyLIO
+{
+  public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    struct Options {
-        Options() {}
-        bool save_motion_undistortion_pcd_ = false;  // 是否保存去畸变前后的点云
-        bool with_ui_ = true;                        // 是否带着UI
+    struct Options
+    {
+        Options()
+        {
+        }
+        bool save_motion_undistortion_pcd_ = false; // 是否保存去畸变前后的点云
+        bool with_ui_ = true;                       // 是否带着UI
     };
 
     LooselyLIO(Options options);
@@ -48,7 +53,7 @@ class LooselyLIO {
     /// 结束程序，退出UI
     void Finish();
 
-   private:
+  private:
     /// 处理同步之后的IMU和雷达数据
     void ProcessMeasurements(const MeasureGroup &meas);
 
@@ -67,32 +72,32 @@ class LooselyLIO {
     /// 执行一次配准和观测
     void Align();
 
-   private:
+  private:
     /// modules
-    std::shared_ptr<MessageSync> sync_ = nullptr;  // 消息同步器
-    StaticIMUInit imu_init_;                       // IMU静止初始化
+    std::shared_ptr<MessageSync> sync_ = nullptr; // 消息同步器
+    StaticIMUInit imu_init_;                      // IMU静止初始化
     std::shared_ptr<sad::IncrementalNDTLO> inc_ndt_lo_ = nullptr;
 
     /// point clouds data
-    FullCloudPtr scan_undistort_{new FullPointCloudType()};  // scan after undistortion
+    FullCloudPtr scan_undistort_{new FullPointCloudType()}; // scan after undistortion
     SE3 pose_of_lo_;
 
     Options options_;
 
     // flags
-    bool imu_need_init_ = true;   // 是否需要估计IMU初始零偏
-    bool flg_first_scan_ = true;  // 是否第一个雷达
-    int frame_num_ = 0;           // 帧数计数
+    bool imu_need_init_ = true;  // 是否需要估计IMU初始零偏
+    bool flg_first_scan_ = true; // 是否第一个雷达
+    int frame_num_ = 0;          // 帧数计数
 
     // EKF data
-    MeasureGroup measures_;              // 同步之后的IMU和点云
-    std::vector<NavStated> imu_states_;  // ESKF预测期间的状态
-    ESKFD eskf_;                         // ESKF
-    SE3 TIL_;                            // Lidar与IMU之间外参
+    MeasureGroup measures_;             // 同步之后的IMU和点云
+    std::vector<NavStated> imu_states_; // ESKF预测期间的状态
+    ESKFD eskf_;                        // ESKF
+    SE3 TIL_;                           // Lidar与IMU之间外参
 
     std::shared_ptr<ui::PangolinWindow> ui_ = nullptr;
 };
 
-}  // namespace sad
+} // namespace sad
 
-#endif  // FASTER_LIO_LASER_MAPPING_H
+#endif // FASTER_LIO_LASER_MAPPING_H

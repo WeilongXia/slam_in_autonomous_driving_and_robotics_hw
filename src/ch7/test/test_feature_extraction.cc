@@ -12,7 +12,7 @@
 #include "common/timer/timer.h"
 
 /// 这里需要vlp16的数据，用wxb的
-DEFINE_string(bag_path, "../dataset/sad/wxb/test1.bag", "path to wxb bag");
+DEFINE_string(bag_path, "../dataset/wxb/test1.bag", "path to wxb bag");
 
 int main(int argc, char **argv)
 {
