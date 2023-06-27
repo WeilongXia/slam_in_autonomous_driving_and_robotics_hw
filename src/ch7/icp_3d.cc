@@ -260,6 +260,11 @@ void Icp3d::BuildTargetKdTree()
     kdtree_->SetEnableANN();
 }
 
+double Icp3d::CauchyLoss(double residual, double c = 0.1)
+{
+    return c * c * std::log(1.0 + (residual / c) * (residual / c));
+}
+
 bool Icp3d::AlignP2Line(SE3 &init_pose)
 {
     LOG(INFO) << "aligning with point to line";

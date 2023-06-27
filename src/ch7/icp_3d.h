@@ -82,6 +82,9 @@ class Icp3d
     // 建立目标点云的Kdtree
     void BuildTargetKdTree();
 
+    // Cauchy kernel
+    double CauchyLoss(double residual, double c = 0.1);
+
     std::shared_ptr<KdTree> kdtree_ = nullptr; // 第5章的kd树
 
     CloudPtr target_ = nullptr;
