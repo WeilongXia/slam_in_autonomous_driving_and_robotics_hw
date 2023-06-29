@@ -125,6 +125,9 @@ class IncNdt3d
     /// 更新体素内部数据, 根据新加入的pts和历史的估计情况来确定自己的估计
     void UpdateVoxel(VoxelData &v);
 
+    // Cauchy kernel
+    double CauchyLoss(double residual, double c = 0.2);
+
     CloudPtr source_ = nullptr;
     Options options_;
 

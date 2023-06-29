@@ -77,6 +77,11 @@ void Ndt3d::BuildVoxels()
     }
 }
 
+double Ndt3d::CauchyLoss(double residual, double c)
+{
+    return c * c * std::log(1.0 + (residual / c) * (residual / c));
+}
+
 bool Ndt3d::AlignNdt(SE3 &init_pose)
 {
     LOG(INFO) << "aligning with ndt";
@@ -131,6 +136,8 @@ bool Ndt3d::AlignNdt(SE3 &init_pose)
                     auto &v = it->second; // voxel
                     Vec3d e = qs - v.mu_;
 
+                    double weight = CauchyLoss(e.norm());
+
                     // check chi2 th
                     double res = e.transpose() * v.info_ * e;
                     if (std::isnan(res) || res > options_.res_outlier_th_)
@@ -141,11 +148,11 @@ bool Ndt3d::AlignNdt(SE3 &init_pose)
 
                     // build residual
                     Eigen::Matrix<double, 3, 6> J;
-                    J.block<3, 3>(0, 0) = -pose.so3().matrix() * SO3::hat(q);
-                    J.block<3, 3>(0, 3) = Mat3d::Identity();
+                    J.block<3, 3>(0, 0) = -weight * pose.so3().matrix() * SO3::hat(q);
+                    J.block<3, 3>(0, 3) = weight * Mat3d::Identity();
 
                     jacobians[real_idx] = J;
-                    errors[real_idx] = e;
+                    errors[real_idx] = weight * e;
                     infos[real_idx] = v.info_;
                     effect_pts[real_idx] = true;
                 }

@@ -83,7 +83,7 @@ class Icp3d
     void BuildTargetKdTree();
 
     // Cauchy kernel
-    double CauchyLoss(double residual, double c = 0.1);
+    double CauchyLoss(double residual, double c = 0.2);
 
     std::shared_ptr<KdTree> kdtree_ = nullptr; // 第5章的kd树
 

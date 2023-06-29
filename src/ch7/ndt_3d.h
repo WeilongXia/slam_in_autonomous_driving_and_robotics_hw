@@ -103,6 +103,9 @@ class Ndt3d
     /// 根据最近邻的类型，生成附近网格
     void GenerateNearbyGrids();
 
+    // Cauchy kernel
+    double CauchyLoss(double residual, double c = 0.2);
+
     CloudPtr target_ = nullptr;
     CloudPtr source_ = nullptr;
 

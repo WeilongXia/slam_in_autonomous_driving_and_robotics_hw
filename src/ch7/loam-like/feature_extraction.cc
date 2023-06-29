@@ -7,7 +7,7 @@
 namespace sad
 {
 
-void FeatureExtraction::Extract(FullCloudPtr pc_in, CloudPtr pc_out_edge, CloudPtr pc_out_surf)
+void FeatureExtraction::Extract(FullCloudPtr pc_in, CloudPtr pc_out_edge, CloudPtr pc_out_surf, CloudPtr pc_out_ground)
 {
     int num_scans = 16;
     std::vector<CloudPtr> scans_in_each_line; // 分线数的点云
@@ -15,6 +15,8 @@ void FeatureExtraction::Extract(FullCloudPtr pc_in, CloudPtr pc_out_edge, CloudP
     {
         scans_in_each_line.emplace_back(new PointCloudType);
     }
+
+    CloudPtr candidate_ground_points(new PointCloudType);
 
     for (auto &pt : pc_in->points)
     {
@@ -26,6 +28,49 @@ void FeatureExtraction::Extract(FullCloudPtr pc_in, CloudPtr pc_out_edge, CloudP
         p.intensity = pt.intensity;
 
         scans_in_each_line[pt.ring]->points.emplace_back(p);
+
+        // 如果高度小于一定阈值，则将其添加到候选地面点集合
+        // 这里阈值取0.0，待调整
+        if (pt.z < 0.0)
+        {
+            PointType p;
+            p.x = pt.x;
+            p.y = pt.y;
+            p.z = pt.z;
+            p.intensity = pt.intensity;
+
+            candidate_ground_points->points.emplace_back(p);
+        }
+    }
+
+    // 使用RANSAC进行平面拟合
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+    pcl::SACSegmentation<pcl::PointXYZI> seg;
+    seg.setOptimizeCoefficients(true);
+    seg.setModelType(pcl::SACMODEL_PLANE);
+    seg.setMethodType(pcl::SAC_RANSAC);
+    seg.setDistanceThreshold(0.1); // 可以根据需要调整此值
+
+    seg.setInputCloud(candidate_ground_points);
+    seg.segment(*inliers, *coefficients);
+
+    // 提取地面点
+    pcl::ExtractIndices<pcl::PointXYZI> extract;
+    extract.setInputCloud(candidate_ground_points);
+    extract.setIndices(inliers);
+    CloudPtr ground_points(new PointCloudType);
+    extract.filter(*ground_points);
+
+    // 将地面点转换回原始类型并添加到输出
+    for (const auto &ground_pt : ground_points->points)
+    {
+        PointType p;
+        p.x = ground_pt.x;
+        p.y = ground_pt.y;
+        p.z = ground_pt.z;
+        p.intensity = 0; // intensity不适用于此点
+        pc_out_ground->points.push_back(p);
     }
 
     // 处理曲率

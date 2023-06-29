@@ -58,12 +58,14 @@ bool Icp3d::AlignP2P(SE3 &init_pose)
 
                 // build residual
                 Vec3d e = p - qs;
+                double weight = CauchyLoss(e.norm());
+
                 Eigen::Matrix<double, 3, 6> J;
-                J.block<3, 3>(0, 0) = pose.so3().matrix() * SO3::hat(q);
-                J.block<3, 3>(0, 3) = -Mat3d::Identity();
+                J.block<3, 3>(0, 0) = weight * pose.so3().matrix() * SO3::hat(q);
+                J.block<3, 3>(0, 3) = -weight * Mat3d::Identity();
 
                 jacobians[idx] = J;
-                errors[idx] = e;
+                errors[idx] = weight * e;
             }
             else
             {
@@ -182,15 +184,17 @@ bool Icp3d::AlignP2Plane(SE3 &init_pose)
                     return;
                 }
 
+                double weight = CauchyLoss(dis);
+
                 effect_pts[idx] = true;
 
                 // build residual
                 Eigen::Matrix<double, 1, 6> J;
-                J.block<1, 3>(0, 0) = -n.head<3>().transpose() * pose.so3().matrix() * SO3::hat(q);
-                J.block<1, 3>(0, 3) = n.head<3>().transpose();
+                J.block<1, 3>(0, 0) = -weight * n.head<3>().transpose() * pose.so3().matrix() * SO3::hat(q);
+                J.block<1, 3>(0, 3) = weight * n.head<3>().transpose();
 
                 jacobians[idx] = J;
-                errors[idx] = dis;
+                errors[idx] = weight * dis;
             }
             else
             {
@@ -260,7 +264,7 @@ void Icp3d::BuildTargetKdTree()
     kdtree_->SetEnableANN();
 }
 
-double Icp3d::CauchyLoss(double residual, double c = 0.1)
+double Icp3d::CauchyLoss(double residual, double c)
 {
     return c * c * std::log(1.0 + (residual / c) * (residual / c));
 }
@@ -320,15 +324,17 @@ bool Icp3d::AlignP2Line(SE3 &init_pose)
                     return;
                 }
 
+                double weight = CauchyLoss(err.norm());
+
                 effect_pts[idx] = true;
 
                 // build residual
                 Eigen::Matrix<double, 3, 6> J;
-                J.block<3, 3>(0, 0) = -SO3::hat(d) * pose.so3().matrix() * SO3::hat(q);
-                J.block<3, 3>(0, 3) = SO3::hat(d);
+                J.block<3, 3>(0, 0) = -weight * SO3::hat(d) * pose.so3().matrix() * SO3::hat(q);
+                J.block<3, 3>(0, 3) = weight * SO3::hat(d);
 
                 jacobians[idx] = J;
-                errors[idx] = err;
+                errors[idx] = weight * err;
             }
             else
             {
