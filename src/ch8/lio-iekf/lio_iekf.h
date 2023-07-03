@@ -14,27 +14,32 @@
 
 #include "tools/ui/pangolin_window.h"
 
-namespace sad {
+namespace sad
+{
 
-class LioIEKF {
-   public:
+class LioIEKF
+{
+  public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
-    struct Options {
-        Options() {}
-        bool save_motion_undistortion_pcd_ = false;  // 是否保存去畸变前后的点云
-        bool with_ui_ = true;                        // 是否带着UI
+    struct Options
+    {
+        Options()
+        {
+        }
+        bool save_motion_undistortion_pcd_ = false; // 是否保存去畸变前后的点云
+        bool with_ui_ = true;                       // 是否带着UI
     };
 
     LioIEKF(Options options = Options());
     ~LioIEKF() = default;
 
     /// init without ros
-    bool Init(const std::string& config_yaml);
+    bool Init(const std::string &config_yaml);
 
     /// 点云回调函数
-    void PCLCallBack(const sensor_msgs::PointCloud2::ConstPtr& msg);
-    void LivoxPCLCallBack(const livox_ros_driver::CustomMsg::ConstPtr& msg);
+    void PCLCallBack(const sensor_msgs::PointCloud2::ConstPtr &msg);
+    void LivoxPCLCallBack(const livox_ros_driver::CustomMsg::ConstPtr &msg);
 
     /// IMU回调函数
     void IMUCallBack(IMUPtr msg_in);
@@ -43,16 +48,22 @@ class LioIEKF {
     void Finish();
 
     /// 获取当前姿态
-    NavStated GetCurrentState() const { return ieskf_.GetNominalState(); }
+    NavStated GetCurrentState() const
+    {
+        return ieskf_.GetNominalState();
+    }
 
     /// 获取当前扫描
-    CloudPtr GetCurrentScan() const { return current_scan_; }
+    CloudPtr GetCurrentScan() const
+    {
+        return current_scan_;
+    }
 
-   private:
-    bool LoadFromYAML(const std::string& yaml_file);
+  private:
+    bool LoadFromYAML(const std::string &yaml_file);
 
     /// 处理同步之后的IMU和雷达数据
-    void ProcessMeasurements(const MeasureGroup& meas);
+    void ProcessMeasurements(const MeasureGroup &meas);
 
     /// 尝试让IMU初始化
     void TryInitIMU();
@@ -72,7 +83,7 @@ class LioIEKF {
     StaticIMUInit imu_init_;
 
     /// point clouds data
-    FullCloudPtr scan_undistort_{new FullPointCloudType()};  // scan after undistortion
+    FullCloudPtr scan_undistort_{new FullPointCloudType()}; // scan after undistortion
     CloudPtr current_scan_ = nullptr;
 
     /// NDT数据
@@ -85,15 +96,15 @@ class LioIEKF {
     int frame_num_ = 0;
 
     ///////////////////////// EKF inputs and output ///////////////////////////////////////////////////////
-    MeasureGroup measures_;  // sync IMU and lidar scan
+    MeasureGroup measures_; // sync IMU and lidar scan
     std::vector<NavStated> imu_states_;
-    IESKFD ieskf_;  // IESKF
-    SE3 TIL_;       // Lidar与IMU之间外参
+    IESKFD ieskf_; // IESKF
+    SE3 TIL_;      // Lidar与IMU之间外参
 
     Options options_;
     std::shared_ptr<ui::PangolinWindow> ui_ = nullptr;
 };
 
-}  // namespace sad
+} // namespace sad
 
-#endif  // FASTER_LIO_LASER_MAPPING_H
+#endif // FASTER_LIO_LASER_MAPPING_H

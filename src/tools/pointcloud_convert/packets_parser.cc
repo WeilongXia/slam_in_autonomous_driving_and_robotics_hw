@@ -1,16 +1,19 @@
 #include "tools/pointcloud_convert/packets_parser.h"
 #include <glog/logging.h>
 
-namespace sad::tools {
+namespace sad::tools
+{
 
 float transform_x_of_x, transform_y_of_x, transform_z_of_x;
 float transform_x_of_y, transform_y_of_y, transform_z_of_y;
 float transform_x_of_z, transform_y_of_z, transform_z_of_z;
 
-int PacketsParser::Setup(const VelodyneConfig &conf) {
+int PacketsParser::Setup(const VelodyneConfig &conf)
+{
     config_ = conf;
 
-    for (auto &rings_pointcloud : organized_raw_pointcloud_) {
+    for (auto &rings_pointcloud : organized_raw_pointcloud_)
+    {
         rings_pointcloud = boost::make_shared<FullPointCloudType>();
     }
 
@@ -23,30 +26,35 @@ int PacketsParser::Setup(const VelodyneConfig &conf) {
     config_.min_angle = 100 * (2 * M_PI - tmp_min_angle) * 180 / M_PI + 0.5;
     config_.max_angle = 100 * (2 * M_PI - tmp_max_angle) * 180 / M_PI + 0.5;
 
-    if (config_.min_angle == config_.max_angle) {
+    if (config_.min_angle == config_.max_angle)
+    {
         config_.min_angle = 0;
         config_.max_angle = 36000;
     }
 
-    for (uint16_t rot_index = 0; rot_index < kRotationMaxUnits; ++rot_index) {
+    for (uint16_t rot_index = 0; rot_index < kRotationMaxUnits; ++rot_index)
+    {
         float rotation = angles::from_degrees(kRotationResolution * rot_index);
         cos_rot_table_[rot_index] = cosf(rotation);
         sin_rot_table_[rot_index] = sinf(rotation);
     }
 
-    for (int i = 0; i < kVLP16ScanPerFiring; ++i) {
+    for (int i = 0; i < kVLP16ScanPerFiring; ++i)
+    {
         cos_vert_angle_table_[i] = cosf(kVLP16ScanVertAngle[i]);
         sin_vert_angle_table_[i] = sinf(kVLP16ScanVertAngle[i]);
     }
 
     std::map<double, int> ordered_vert_angle;
-    for (int i = 0; i < kVLP16ScanPerFiring; ++i) {
+    for (int i = 0; i < kVLP16ScanPerFiring; ++i)
+    {
         ordered_vert_angle[kVLP16ScanVertAngle[i]] = i;
     }
 
     int index = 0;
     rings_map_.resize(ordered_vert_angle.size());
-    for (auto iter = ordered_vert_angle.begin(); iter != ordered_vert_angle.end(); ++iter, index++) {
+    for (auto iter = ordered_vert_angle.begin(); iter != ordered_vert_angle.end(); ++iter, index++)
+    {
         rings_map_[iter->second] = index;
     }
 
@@ -73,10 +81,12 @@ int PacketsParser::Setup(const VelodyneConfig &conf) {
     return 0;
 }
 
-void PacketsParser::PaddingPointCloud(const PacketsMsgPtr &scan_msg, FullCloudPtr &out_pc_msg_ptr) {
+void PacketsParser::PaddingPointCloud(const PacketsMsgPtr &scan_msg, FullCloudPtr &out_pc_msg_ptr)
+{
     size_t packets_size = scan_msg->packets.size();
 
-    if (packets_size <= 0) {
+    if (packets_size <= 0)
+    {
         LOG(ERROR) << "velodyne pointcloud node input packets size is empty";
         return;
     }
@@ -84,12 +94,14 @@ void PacketsParser::PaddingPointCloud(const PacketsMsgPtr &scan_msg, FullCloudPt
     out_pc_msg_ptr->reserve(packets_size * kScanPerBlock);
 
     int one_ring_points_size = packets_size * kScanPerBlock / organized_raw_pointcloud_.size();
-    for (auto &vert_ring_pointcloud : organized_raw_pointcloud_) {
+    for (auto &vert_ring_pointcloud : organized_raw_pointcloud_)
+    {
         vert_ring_pointcloud->points.clear();
         vert_ring_pointcloud->points.reserve(one_ring_points_size);
     }
 
-    for (size_t i = 0; i < packets_size; ++i) {
+    for (size_t i = 0; i < packets_size; ++i)
+    {
         Unpack(scan_msg->packets[i], scan_msg->header.stamp, organized_raw_pointcloud_);
     }
 
@@ -98,13 +110,15 @@ void PacketsParser::PaddingPointCloud(const PacketsMsgPtr &scan_msg, FullCloudPt
     out_pc_msg_ptr->header.stamp = pcl_conversions::toPCL(scan_msg->header).stamp;
     out_pc_msg_ptr->header.frame_id = scan_msg->header.frame_id;
 
-    if (out_pc_msg_ptr->empty()) {
+    if (out_pc_msg_ptr->empty())
+    {
         //        LOG(ERROR) << "All points is NAN!Please check velodyne:" << config_.model;
     }
 }
 
 void PacketsParser::Unpack(const velodyne_msgs::VelodynePacket &pkt, const ros::Time &msg_stamp,
-                           std::vector<FullCloudPtr> &rings_pointcloud) {
+                           std::vector<FullCloudPtr> &rings_pointcloud)
+{
     float azimuth_diff = 0.0;
     float last_azimuth_diff = 0.0;
     float azimuth_corrected_f = 0.0;
@@ -113,22 +127,29 @@ void PacketsParser::Unpack(const velodyne_msgs::VelodynePacket &pkt, const ros::
     const double pkt_time = ros::Time(pkt.stamp).toSec();
     const auto *raw = (const RawPacket *)&pkt.data[0];
 
-    for (int block = 0; block < kBlocksPerPacket; block++) {
-        if (kUpperBank != raw->blocks[block].header) {
+    for (int block = 0; block < kBlocksPerPacket; block++)
+    {
+        if (kUpperBank != raw->blocks[block].header)
+        {
             return;
         }
 
         auto azimuth = static_cast<float>(raw->blocks[block].rotation);
 
-        if (block < (kBlocksPerPacket - 1)) {
+        if (block < (kBlocksPerPacket - 1))
+        {
             azimuth_diff = (float)((36000 + raw->blocks[block + 1].rotation - raw->blocks[block].rotation) % 36000);
             last_azimuth_diff = azimuth_diff;
-        } else {
+        }
+        else
+        {
             azimuth_diff = last_azimuth_diff;
         }
 
-        for (int firing = 0, k = 0; firing < kVLP16FiringsPerBlock; ++firing) {
-            for (int dsr = 0; dsr < kVLP16ScanPerFiring; ++dsr, k += kRawScanSize) {
+        for (int firing = 0, k = 0; firing < kVLP16FiringsPerBlock; ++firing)
+        {
+            for (int dsr = 0; dsr < kVLP16ScanPerFiring; ++dsr, k += kRawScanSize)
+            {
                 union TwoBytes raw_distance;
                 raw_distance.bytes[0] = raw->blocks[block].data[k];
                 raw_distance.bytes[1] = raw->blocks[block].data[k + 1];
@@ -152,11 +173,15 @@ void PacketsParser::Unpack(const velodyne_msgs::VelodynePacket &pkt, const ros::
 
                 float distance = raw_distance.uint * kDistanceResolution;
 
-                if (raw_distance.uint == 0 || !isScanValid(azimuth_corrected, distance)) {
+                if (raw_distance.uint == 0 || !isScanValid(azimuth_corrected, distance))
+                {
                     FilledNAN(point);
-                } else {
+                }
+                else
+                {
                     ComputeCoords(distance, dsr, azimuth_corrected, point);
-                    if (!isScanValid(point)) {
+                    if (!isScanValid(point))
+                    {
                         FilledFree(point);
                     }
                 }
@@ -168,22 +193,30 @@ void PacketsParser::Unpack(const velodyne_msgs::VelodynePacket &pkt, const ros::
     }
 }
 
-void PacketsParser::ArrangePointcloud(const std::vector<FullCloudPtr> &rings_pointcloud, FullCloudPtr &out_pc_ptr) {
+void PacketsParser::ArrangePointcloud(const std::vector<FullCloudPtr> &rings_pointcloud, FullCloudPtr &out_pc_ptr)
+{
     int width = 0;
     int height = 0;
-    for (size_t i = 0; i < rings_pointcloud.size(); ++i) {
-        if (rings_pointcloud[i]->points.size() <= 0) {
+    for (size_t i = 0; i < rings_pointcloud.size(); ++i)
+    {
+        if (rings_pointcloud[i]->points.size() <= 0)
+        {
             ROS_ERROR_STREAM("lidar points in ring " << i << " is empty");
         }
 
-        if (config_.is_organized) {
+        if (config_.is_organized)
+        {
             out_pc_ptr->insert(out_pc_ptr->end(), rings_pointcloud[i]->points.begin(),
                                rings_pointcloud[i]->points.end());
             width = std::max(static_cast<int>(rings_pointcloud[i]->points.size()), width);
             height += 1;
-        } else {
-            for (auto &point : *rings_pointcloud[i]) {
-                if (isPointValid(point)) {
+        }
+        else
+        {
+            for (auto &point : *rings_pointcloud[i])
+            {
+                if (isPointValid(point))
+                {
                     out_pc_ptr->points.emplace_back(point);
                     width += 1;
                 }
@@ -197,21 +230,24 @@ void PacketsParser::ArrangePointcloud(const std::vector<FullCloudPtr> &rings_poi
     out_pc_ptr->height = height;
 }
 
-inline void PacketsParser::FilledNAN(FullPointType &point) {
+inline void PacketsParser::FilledNAN(FullPointType &point)
+{
     point.x = HIT_NAN;
     point.y = HIT_NAN;
     point.z = HIT_NAN;
     point.intensity = 0;
 }
 
-inline void PacketsParser::FilledFree(FullPointType &point) {
+inline void PacketsParser::FilledFree(FullPointType &point)
+{
     point.x = HIT_FREE;
     point.y = HIT_FREE;
     point.z = HIT_FREE;
     point.intensity = 0;
 }
 
-inline bool PacketsParser::isPointValid(const FullPointType &point) {
+inline bool PacketsParser::isPointValid(const FullPointType &point)
+{
     if (point.x == HIT_NAN || point.x == HIT_FREE || point.y == HIT_NAN || point.y == HIT_FREE || point.z == HIT_NAN ||
         point.z == HIT_FREE)
         return false;
@@ -219,17 +255,21 @@ inline bool PacketsParser::isPointValid(const FullPointType &point) {
     return true;
 }
 
-inline bool PacketsParser::isScanValid(int rotation, float range) {
-    if (range < config_.min_range || range > config_.max_range) {
+inline bool PacketsParser::isScanValid(int rotation, float range)
+{
+    if (range < config_.min_range || range > config_.max_range)
+    {
         return false;
     }
 
     return true;
 }
 
-inline bool PacketsParser::isScanValid(const FullPointType &point) {
+inline bool PacketsParser::isScanValid(const FullPointType &point)
+{
     if (point.x < config_.car_front && point.x > config_.car_back && point.y < config_.car_left &&
-        point.y > config_.car_right && point.z < config_.car_top && point.z > config_.car_bottom) {
+        point.y > config_.car_right && point.z < config_.car_top && point.z > config_.car_bottom)
+    {
         return false;
     }
 
@@ -237,7 +277,8 @@ inline bool PacketsParser::isScanValid(const FullPointType &point) {
 }
 
 void PacketsParser::ComputeCoords(const float distance, const int vert_line_index, const uint16_t &rotation,
-                                  FullPointType &point) {
+                                  FullPointType &point)
+{
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;
@@ -255,7 +296,8 @@ void PacketsParser::ComputeCoords(const float distance, const int vert_line_inde
     point.y = -x;
     point.z = z;
 
-    if (config_.enable_coordinate_transformation) {
+    if (config_.enable_coordinate_transformation)
+    {
         float x_coord = point.x;
         float y_coord = point.y;
         float z_coord = point.z;
@@ -269,4 +311,4 @@ void PacketsParser::ComputeCoords(const float distance, const int vert_line_inde
     }
 }
 
-}  // namespace sad::tools
+} // namespace sad::tools
