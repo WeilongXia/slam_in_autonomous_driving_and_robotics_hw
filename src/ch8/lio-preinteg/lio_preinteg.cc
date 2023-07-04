@@ -1,7 +1,7 @@
-#include <pcl/common/transforms.h>
-#include <yaml-cpp/yaml.h>
 #include <execution>
 #include <fstream>
+#include <pcl/common/transforms.h>
+#include <yaml-cpp/yaml.h>
 
 #include <g2o/core/block_solver.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
@@ -17,11 +17,13 @@
 #include "common/timer/timer.h"
 #include "lio_preinteg.h"
 
-namespace sad {
+namespace sad
+{
 
-LioPreinteg::LioPreinteg(Options options) : options_(options), preinteg_(new IMUPreintegration()) {
+LioPreinteg::LioPreinteg(Options options) : options_(options), preinteg_(new IMUPreintegration())
+{
     StaticIMUInit::Options imu_init_options;
-    imu_init_options.use_speed_for_static_checking_ = false;  // 本节数据不需要轮速计
+    imu_init_options.use_speed_for_static_checking_ = false; // 本节数据不需要轮速计
     imu_init_ = StaticIMUInit(imu_init_options);
 
     double bg_rw2 = 1.0 / (options_.bias_gyro_var_ * options_.bias_gyro_var_);
@@ -38,13 +40,16 @@ LioPreinteg::LioPreinteg(Options options) : options_(options), preinteg_(new IMU
     ndt_ = IncNdt3d(options_.ndt_options_);
 }
 
-bool LioPreinteg::Init(const std::string &config_yaml) {
-    if (!LoadFromYAML(config_yaml)) {
+bool LioPreinteg::Init(const std::string &config_yaml)
+{
+    if (!LoadFromYAML(config_yaml))
+    {
         LOG(INFO) << "init failed.";
         return false;
     }
 
-    if (options_.with_ui_) {
+    if (options_.with_ui_)
+    {
         ui_ = std::make_shared<ui::PangolinWindow>();
         ui_->Init();
     }
@@ -52,11 +57,13 @@ bool LioPreinteg::Init(const std::string &config_yaml) {
     return true;
 }
 
-void LioPreinteg::ProcessMeasurements(const MeasureGroup &meas) {
+void LioPreinteg::ProcessMeasurements(const MeasureGroup &meas)
+{
     LOG(INFO) << "call meas, imu: " << meas.imu_.size() << ", lidar pts: " << meas.lidar_->size();
     measures_ = meas;
 
-    if (imu_need_init_) {
+    if (imu_need_init_)
+    {
         // 初始化IMU系统
         TryInitIMU();
         return;
@@ -72,7 +79,8 @@ void LioPreinteg::ProcessMeasurements(const MeasureGroup &meas) {
     Align();
 }
 
-bool LioPreinteg::LoadFromYAML(const std::string &yaml_file) {
+bool LioPreinteg::LoadFromYAML(const std::string &yaml_file)
+{
     // get params from yaml
     sync_ = std::make_shared<MessageSync>([this](const MeasureGroup &m) { ProcessMeasurements(m); });
     sync_->Init(yaml_file);
@@ -88,7 +96,8 @@ bool LioPreinteg::LoadFromYAML(const std::string &yaml_file) {
     return true;
 }
 
-void LioPreinteg::Align() {
+void LioPreinteg::Align()
+{
     FullCloudPtr scan_undistort_trans(new FullPointCloudType);
     pcl::transformPointCloud(*scan_undistort_, *scan_undistort_trans, TIL_.matrix().cast<float>());
     scan_undistort_ = scan_undistort_trans;
@@ -104,7 +113,8 @@ void LioPreinteg::Align() {
     voxel.filter(*current_scan_filter);
 
     /// the first scan
-    if (flg_first_scan_) {
+    if (flg_first_scan_)
+    {
         ndt_.AddCloud(current_scan_);
         preinteg_ = std::make_shared<IMUPreintegration>(options_.preinteg_options_);
         flg_first_scan_ = false;
@@ -126,7 +136,8 @@ void LioPreinteg::Align() {
     SE3 current_pose = current_nav_state_.GetSE3();
     SE3 delta_pose = last_ndt_pose_.inverse() * current_pose;
 
-    if (delta_pose.translation().norm() > 0.3 || delta_pose.so3().log().norm() > math::deg2rad(5.0)) {
+    if (delta_pose.translation().norm() > 0.3 || delta_pose.so3().log().norm() > math::deg2rad(5.0))
+    {
         // 将地图合入NDT中
         CloudPtr current_scan_world(new PointCloudType);
         pcl::transformPointCloud(*current_scan_filter, *current_scan_world, current_pose.matrix());
@@ -135,20 +146,24 @@ void LioPreinteg::Align() {
     }
 
     // 放入UI
-    if (ui_) {
-        ui_->UpdateScan(current_scan_, current_nav_state_.GetSE3());  // 转成Lidar Pose传给UI
+    if (ui_)
+    {
+        ui_->UpdateScan(current_scan_, current_nav_state_.GetSE3()); // 转成Lidar Pose传给UI
         ui_->UpdateNavState(current_nav_state_);
     }
 
     frame_num_++;
 }
 
-void LioPreinteg::TryInitIMU() {
-    for (auto imu : measures_.imu_) {
+void LioPreinteg::TryInitIMU()
+{
+    for (auto imu : measures_.imu_)
+    {
         imu_init_.AddIMU(*imu);
     }
 
-    if (imu_init_.InitSuccess()) {
+    if (imu_init_.InitSuccess())
+    {
         // 读取初始零偏，设置ESKF
         // 噪声由初始化器估计
         options_.preinteg_options_.noise_gyro_ = sqrt(imu_init_.GetCovGyro()[0]);
@@ -163,7 +178,7 @@ void LioPreinteg::TryInitIMU() {
         current_nav_state_.bg_ = imu_init_.GetInitBg();
         current_nav_state_.ba_ = imu_init_.GetInitBa();
         current_nav_state_.timestamp_ = measures_.imu_.back()->timestamp_;
-        
+
         last_nav_state_ = current_nav_state_;
         last_imu_ = measures_.imu_.back();
 
@@ -171,9 +186,10 @@ void LioPreinteg::TryInitIMU() {
     }
 }
 
-void LioPreinteg::Undistort() {
+void LioPreinteg::Undistort()
+{
     auto cloud = measures_.lidar_;
-    auto imu_state = imu_states_.back();  // 最后时刻的状态
+    auto imu_state = imu_states_.back(); // 最后时刻的状态
     SE3 T_end = SE3(imu_state.R_, imu_state.p_);
 
     /// 将所有点转到最后时刻状态上
@@ -196,13 +212,16 @@ void LioPreinteg::Undistort() {
     scan_undistort_ = cloud;
 }
 
-void LioPreinteg::Predict() {
+void LioPreinteg::Predict()
+{
     imu_states_.clear();
     imu_states_.emplace_back(last_nav_state_);
 
     /// 对IMU状态进行预测
-    for (auto &imu : measures_.imu_) {
-        if (last_imu_ != nullptr) {
+    for (auto &imu : measures_.imu_)
+    {
+        if (last_imu_ != nullptr)
+        {
             preinteg_->Integrate(*imu, imu->timestamp_ - last_imu_->timestamp_);
         }
 
@@ -211,20 +230,32 @@ void LioPreinteg::Predict() {
     }
 }
 
-void LioPreinteg::PCLCallBack(const sensor_msgs::PointCloud2::ConstPtr &msg) { sync_->ProcessCloud(msg); }
+void LioPreinteg::PCLCallBack(const sensor_msgs::PointCloud2::ConstPtr &msg)
+{
+    sync_->ProcessCloud(msg);
+}
 
-void LioPreinteg::LivoxPCLCallBack(const livox_ros_driver::CustomMsg::ConstPtr &msg) { sync_->ProcessCloud(msg); }
+void LioPreinteg::LivoxPCLCallBack(const livox_ros_driver::CustomMsg::ConstPtr &msg)
+{
+    sync_->ProcessCloud(msg);
+}
 
-void LioPreinteg::IMUCallBack(IMUPtr msg_in) { sync_->ProcessIMU(msg_in); }
+void LioPreinteg::IMUCallBack(IMUPtr msg_in)
+{
+    sync_->ProcessIMU(msg_in);
+}
 
-void LioPreinteg::Finish() {
-    if (ui_) {
+void LioPreinteg::Finish()
+{
+    if (ui_)
+    {
         ui_->Quit();
     }
     LOG(INFO) << "finish done";
 }
 
-void LioPreinteg::Optimize() {
+void LioPreinteg::Optimize()
+{
     // 调用g2o求解优化问题
     // 上一个state到本时刻state的预积分因子，本时刻的NDT因子
     LOG(INFO) << " === optimizing frame " << frame_num_ << " === "
@@ -264,7 +295,7 @@ void LioPreinteg::Optimize() {
     // 本时刻顶点，pose, v, bg, ba
     auto v1_pose = new VertexPose();
     v1_pose->setId(4);
-    v1_pose->setEstimate(ndt_pose_);  // NDT pose作为初值
+    v1_pose->setEstimate(ndt_pose_); // NDT pose作为初值
     // v1_pose->setEstimate(current_nav_state_.GetSE3());  // 预测的pose作为初值
     optimizer.addVertex(v1_pose);
 
@@ -322,7 +353,8 @@ void LioPreinteg::Optimize() {
     edge_ndt->setInformation(options_.ndt_info_);
     optimizer.addEdge(edge_ndt);
 
-    if (options_.verbose_) {
+    if (options_.verbose_)
+    {
         LOG(INFO) << "last: " << last_nav_state_;
         LOG(INFO) << "pred: " << current_nav_state_;
         LOG(INFO) << "NDT: " << ndt_pose_.translation().transpose() << ","
@@ -350,7 +382,8 @@ void LioPreinteg::Optimize() {
     current_nav_state_.bg_ = v1_bg->estimate();
     current_nav_state_.ba_ = v1_ba->estimate();
 
-    if (options_.verbose_) {
+    if (options_.verbose_)
+    {
         LOG(INFO) << "last changed to: " << last_nav_state_;
         LOG(INFO) << "curr changed to: " << current_nav_state_;
         LOG(INFO) << "preinteg chi2: " << edge_inertial->chi2() << ", err: " << edge_inertial->error().transpose();
@@ -391,7 +424,8 @@ void LioPreinteg::Optimize() {
     H = math::Marginalize(H, 0, 14);
     prior_info_ = H.block<15, 15>(15, 15);
 
-    if (options_.verbose_) {
+    if (options_.verbose_)
+    {
         LOG(INFO) << "info trace: " << prior_info_.trace();
         LOG(INFO) << "optimization done.";
     }
@@ -400,26 +434,32 @@ void LioPreinteg::Optimize() {
     last_nav_state_ = current_nav_state_;
 }
 
-void LioPreinteg::NormalizeVelocity() {
+void LioPreinteg::NormalizeVelocity()
+{
     /// 限制v的变化
     /// 一般是-y 方向速度
     Vec3d v_body = current_nav_state_.R_.inverse() * current_nav_state_.v_;
-    if (v_body[1] > 0) {
+    if (v_body[1] > 0)
+    {
         v_body[1] = 0;
     }
     v_body[2] = 0;
 
-    if (v_body[1] < -2.0) {
+    if (v_body[1] < -2.0)
+    {
         v_body[1] = -2.0;
     }
 
-    if (v_body[0] > 0.1) {
+    if (v_body[0] > 0.1)
+    {
         v_body[0] = 0.1;
-    } else if (v_body[0] < -0.1) {
+    }
+    else if (v_body[0] < -0.1)
+    {
         v_body[0] = -0.1;
     }
 
     current_nav_state_.v_ = current_nav_state_.R_ * v_body;
 }
 
-}  // namespace sad
+} // namespace sad
