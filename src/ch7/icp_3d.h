@@ -78,6 +78,14 @@ class Icp3d
     /// 基于gauss-newton的点面ICP
     bool AlignP2Plane(SE3 &init_pose);
 
+    /**
+     * 计算给定Pose下的雅可比和残差矩阵，符合IEKF中符号（8.17, 8.19）
+     * @param pose
+     * @param HTVH
+     * @param HTVr
+     */
+    void ComputeResidualAndJacobians(const SE3 &pose, Mat18d &HTVH, Vec18d &HTVr);
+
   private:
     // 建立目标点云的Kdtree
     void BuildTargetKdTree();

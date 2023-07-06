@@ -257,6 +257,85 @@ bool Icp3d::AlignP2Plane(SE3 &init_pose)
     return true;
 }
 
+void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec18d &HTVr)
+{
+    LOG(INFO) << "aligning with point to plane";
+    assert(target_ != nullptr && source_ != nullptr);
+
+    // 整体流程与AlignP2Plane一致，不需要迭代更新位姿，只需要计算HTVH和HTVr
+
+    SE3 pose = input_pose;
+    if (!options_.use_initial_translation_)
+    {
+        pose.translation() = target_center_ - source_center_; // 设置平移初始值
+    }
+
+    std::vector<int> index(source_->points.size());
+    for (int i = 0; i < index.size(); ++i)
+    {
+        index[i] = i;
+    }
+
+    std::vector<bool> effect_pts(index.size(), false);
+    int effective_num = 0;
+
+    // 最近邻，可以并发
+    std::for_each(std::execution::par_unseq, index.begin(), index.end(), [&](int idx) {
+        auto q = ToVec3d(source_->points[idx]);
+        Vec3d qs = pose * q; // 转换之后的q
+        std::vector<int> nn;
+        kdtree_->GetClosestPoint(ToPointType(qs), nn, 5); // 这里取5个最近邻
+        if (nn.size() > 3)
+        {
+            // convert to eigen
+            std::vector<Vec3d> nn_eigen;
+            for (int i = 0; i < nn.size(); ++i)
+            {
+                nn_eigen.emplace_back(ToVec3d(target_->points[nn[i]]));
+            }
+
+            Vec4d n;
+            if (!math::FitPlane(nn_eigen, n))
+            {
+                // 失败的不要
+                effect_pts[idx] = false;
+                return;
+            }
+
+            double dis = n.head<3>().dot(qs) + n[3];
+            if (fabs(dis) > options_.max_plane_distance_)
+            {
+                // 点离的太远了不要
+                effect_pts[idx] = false;
+                return;
+            }
+
+            double weight = CauchyLoss(dis);
+
+            effect_pts[idx] = true;
+
+            // calculate jacobians
+            Eigen::Matrix<double, 1, 18> J = Eigen::Matrix<double, 1, 18>::Zero();
+            J.block<1, 3>(0, 0) = weight * n.head<3>().transpose();
+            J.block<1, 3>(0, 6) = -weight * n.head<3>().transpose() * pose.so3().matrix() * SO3::hat(q);
+
+            HTVH += J.transpose() * J;
+            HTVr += J.transpose() * weight * dis;
+
+            effective_num++;
+        }
+        else
+        {
+            effect_pts[idx] = false;
+        }
+    });
+
+    if (effective_num < options_.min_effective_pts_)
+    {
+        LOG(INFO) << "effective num is: " << effective_num;
+    }
+}
+
 void Icp3d::BuildTargetKdTree()
 {
     kdtree_ = std::make_shared<KdTree>();
