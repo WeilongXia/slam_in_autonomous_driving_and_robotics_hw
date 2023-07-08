@@ -96,6 +96,7 @@ class LioIEKF
 
     /// ICP数据
     Icp3d icp_;
+    bool use_icp_;
 
     // flags
     bool imu_need_init_ = true;

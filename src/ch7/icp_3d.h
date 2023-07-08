@@ -53,6 +53,8 @@ class Icp3d
         LOG(INFO) << "target center: " << target_center_.transpose();
     }
 
+    void BuildLocalMapKdTree();
+
     /// 设置被配准的Scan
     void SetSource(CloudPtr source)
     {
@@ -86,6 +88,8 @@ class Icp3d
      */
     void ComputeResidualAndJacobians(const SE3 &pose, Mat18d &HTVH, Vec18d &HTVr);
 
+    void AddCloud(CloudPtr cloud_world);
+
   private:
     // 建立目标点云的Kdtree
     void BuildTargetKdTree();
@@ -94,9 +98,12 @@ class Icp3d
     double CauchyLoss(double residual, double c = 0.2);
 
     std::shared_ptr<KdTree> kdtree_ = nullptr; // 第5章的kd树
+    std::shared_ptr<KdTree> localmap_kdtree_ = nullptr;
 
     CloudPtr target_ = nullptr;
     CloudPtr source_ = nullptr;
+
+    CloudPtr local_map_ = nullptr;
 
     Vec3d target_center_ = Vec3d::Zero();
     Vec3d source_center_ = Vec3d::Zero();

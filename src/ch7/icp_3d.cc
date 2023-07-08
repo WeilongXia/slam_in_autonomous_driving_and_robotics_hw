@@ -10,6 +10,18 @@
 namespace sad
 {
 
+void Icp3d::AddCloud(CloudPtr cloud_world)
+{
+    if (local_map_ == nullptr)
+    {
+        // 第一个帧，直接加入local map
+        local_map_.reset(new PointCloudType);
+        // operator += 用来拼接点云
+        *local_map_ += *cloud_world;
+    }
+    *local_map_ += *cloud_world;
+}
+
 bool Icp3d::AlignP2P(SE3 &init_pose)
 {
     LOG(INFO) << "aligning with point to point";
@@ -259,8 +271,9 @@ bool Icp3d::AlignP2Plane(SE3 &init_pose)
 
 void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec18d &HTVr)
 {
-    LOG(INFO) << "aligning with point to plane";
-    assert(target_ != nullptr && source_ != nullptr);
+    LOG(INFO) << "compute residual and jacobians";
+    assert(local_map_ != nullptr && source_ != nullptr);
+    std::cout << "111" << std::endl;
 
     // 整体流程与AlignP2Plane一致，不需要迭代更新位姿，只需要计算HTVH和HTVr
 
@@ -277,14 +290,15 @@ void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec
     }
 
     std::vector<bool> effect_pts(index.size(), false);
-    int effective_num = 0;
+    std::vector<Eigen::Matrix<double, 1, 18>> jacobians(index.size());
+    std::vector<double> errors(index.size());
 
     // 最近邻，可以并发
     std::for_each(std::execution::par_unseq, index.begin(), index.end(), [&](int idx) {
         auto q = ToVec3d(source_->points[idx]);
         Vec3d qs = pose * q; // 转换之后的q
         std::vector<int> nn;
-        kdtree_->GetClosestPoint(ToPointType(qs), nn, 5); // 这里取5个最近邻
+        localmap_kdtree_->GetClosestPoint(ToPointType(qs), nn, 5); // 这里取5个最近邻
         if (nn.size() > 3)
         {
             // convert to eigen
@@ -319,10 +333,9 @@ void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec
             J.block<1, 3>(0, 0) = weight * n.head<3>().transpose();
             J.block<1, 3>(0, 6) = -weight * n.head<3>().transpose() * pose.so3().matrix() * SO3::hat(q);
 
-            HTVH += J.transpose() * J;
-            HTVr += J.transpose() * weight * dis;
-
-            effective_num++;
+            jacobians[idx] = J;
+            errors[idx] = weight * dis;
+            effect_pts[idx] = true;
         }
         else
         {
@@ -330,10 +343,30 @@ void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec
         }
     });
 
-    if (effective_num < options_.min_effective_pts_)
+    // 累加Hessian和error，计算dx
+    double total_res = 0;
+    int effective_num = 0;
+
+    HTVH.setZero();
+    HTVr.setZero();
+
+    const double info_ratio = 0.01; // 每个点的反馈因子
+
+    for (int idx = 0; idx < effect_pts.size(); ++idx)
     {
-        LOG(INFO) << "effective num is: " << effective_num;
+        if (!effect_pts[idx])
+        {
+            continue;
+        }
+
+        total_res += errors[idx] * errors[idx];
+        effective_num++;
+
+        HTVH += jacobians[idx].transpose() * jacobians[idx] * info_ratio;
+        HTVr += -jacobians[idx].transpose() * errors[idx] * info_ratio;
     }
+
+    LOG(INFO) << "effective: " << effective_num << std::endl;
 }
 
 void Icp3d::BuildTargetKdTree()
@@ -341,6 +374,13 @@ void Icp3d::BuildTargetKdTree()
     kdtree_ = std::make_shared<KdTree>();
     kdtree_->BuildTree(target_);
     kdtree_->SetEnableANN();
+}
+
+void Icp3d::BuildLocalMapKdTree()
+{
+    localmap_kdtree_ = std::make_shared<KdTree>();
+    localmap_kdtree_->BuildTree(local_map_);
+    localmap_kdtree_->SetEnableANN();
 }
 
 double Icp3d::CauchyLoss(double residual, double c)

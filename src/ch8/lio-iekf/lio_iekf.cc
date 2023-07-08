@@ -81,6 +81,10 @@ bool LioIEKF::LoadFromYAML(const std::string &yaml_file)
     Vec3d lidar_T_wrt_IMU = math::VecFromArray(ext_t);
     Mat3d lidar_R_wrt_IMU = math::MatFromArray(ext_r);
     TIL_ = SE3(lidar_R_wrt_IMU, lidar_T_wrt_IMU);
+
+    use_icp_ = yaml["use_icp"].as<bool>();
+    std::cout << "use_icp_: " << use_icp_ << std::endl;
+
     return true;
 }
 
@@ -103,8 +107,17 @@ void LioIEKF::Align()
     /// the first scan
     if (flg_first_scan_)
     {
-        ndt_.AddCloud(current_scan_);
-        flg_first_scan_ = false;
+        if (use_icp_ == false)
+        {
+            ndt_.AddCloud(current_scan_);
+            flg_first_scan_ = false;
+        }
+        else
+        {
+            icp_.AddCloud(current_scan_);
+            icp_.BuildLocalMapKdTree();
+            flg_first_scan_ = false;
+        }
 
         return;
     }
@@ -112,10 +125,20 @@ void LioIEKF::Align()
     // 后续的scan，使用NDT配合pose进行更新
     LOG(INFO) << "=== frame " << frame_num_;
 
-    ndt_.SetSource(current_scan_filter);
-    ieskf_.UpdateUsingCustomObserve([this](const SE3 &input_pose, Mat18d &HTVH, Vec18d &HTVr) {
-        ndt_.ComputeResidualAndJacobians(input_pose, HTVH, HTVr);
-    });
+    if (use_icp_ == false)
+    {
+        ndt_.SetSource(current_scan_filter);
+        ieskf_.UpdateUsingCustomObserve([this](const SE3 &input_pose, Mat18d &HTVH, Vec18d &HTVr) {
+            ndt_.ComputeResidualAndJacobians(input_pose, HTVH, HTVr);
+        });
+    }
+    else
+    {
+        icp_.SetSource(current_scan_filter);
+        ieskf_.UpdateUsingCustomObserve([this](const SE3 &input_pose, Mat18d &HTVH, Vec18d &HTVr) {
+            icp_.ComputeResidualAndJacobians(input_pose, HTVH, HTVr);
+        });
+    }
 
     auto current_nav_state = ieskf_.GetNominalState();
 
@@ -125,10 +148,21 @@ void LioIEKF::Align()
 
     if (delta_pose.translation().norm() > 1.0 || delta_pose.so3().log().norm() > math::deg2rad(10.0))
     {
-        // 将地图合入NDT中
-        CloudPtr current_scan_world(new PointCloudType);
-        pcl::transformPointCloud(*current_scan_filter, *current_scan_world, current_pose.matrix());
-        ndt_.AddCloud(current_scan_world);
+        if (use_icp_ == false)
+        {
+            // 将地图合入NDT中
+            CloudPtr current_scan_world(new PointCloudType);
+            pcl::transformPointCloud(*current_scan_filter, *current_scan_world, current_pose.matrix());
+            ndt_.AddCloud(current_scan_world);
+        }
+        else
+        {
+            // 将地图合入NDT中
+            CloudPtr current_scan_world(new PointCloudType);
+            pcl::transformPointCloud(*current_scan_filter, *current_scan_world, current_pose.matrix());
+            icp_.AddCloud(current_scan_world);
+            icp_.BuildLocalMapKdTree();
+        }
         last_pose_ = current_pose;
     }
 
