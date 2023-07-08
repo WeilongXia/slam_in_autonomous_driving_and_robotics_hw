@@ -18,8 +18,23 @@ void Icp3d::AddCloud(CloudPtr cloud_world)
         local_map_.reset(new PointCloudType);
         // operator += 用来拼接点云
         *local_map_ += *cloud_world;
+        return;
     }
-    *local_map_ += *cloud_world;
+    else
+    {
+        // 重建local map
+        scans_in_local_map_.emplace_back(cloud_world);
+        if (scans_in_local_map_.size() > 30)
+        {
+            scans_in_local_map_.pop_front();
+        }
+
+        local_map_.reset(new PointCloudType);
+        for (auto &scan : scans_in_local_map_)
+        {
+            *local_map_ += *scan;
+        }
+    }
 }
 
 bool Icp3d::AlignP2P(SE3 &init_pose)
@@ -273,7 +288,6 @@ void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec
 {
     LOG(INFO) << "compute residual and jacobians";
     assert(local_map_ != nullptr && source_ != nullptr);
-    std::cout << "111" << std::endl;
 
     // 整体流程与AlignP2Plane一致，不需要迭代更新位姿，只需要计算HTVH和HTVr
 
@@ -305,7 +319,7 @@ void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec
             std::vector<Vec3d> nn_eigen;
             for (int i = 0; i < nn.size(); ++i)
             {
-                nn_eigen.emplace_back(ToVec3d(target_->points[nn[i]]));
+                nn_eigen.emplace_back(ToVec3d(local_map_->points[nn[i]]));
             }
 
             Vec4d n;

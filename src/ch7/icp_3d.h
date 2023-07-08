@@ -104,6 +104,7 @@ class Icp3d
     CloudPtr source_ = nullptr;
 
     CloudPtr local_map_ = nullptr;
+    std::deque<CloudPtr> scans_in_local_map_;
 
     Vec3d target_center_ = Vec3d::Zero();
     Vec3d source_center_ = Vec3d::Zero();
