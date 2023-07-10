@@ -164,6 +164,7 @@ void LioIEKF::Align()
             icp_.BuildLocalMapKdTree();
         }
         last_pose_ = current_pose;
+        // std::cout << "update local map" << std::endl;
     }
 
     // 放入UI

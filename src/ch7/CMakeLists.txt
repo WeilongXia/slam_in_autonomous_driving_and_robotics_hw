@@ -3,6 +3,7 @@ add_library(${PROJECT_NAME}.ch7
         ndt_3d.cc
         gen_simu_data.cc
         direct_ndt_lo.cc
+        direct_icp_lo.cc
         incremental_ndt_lo.cc
         ndt_inc.cc
         loam-like/feature_extraction.cc
@@ -36,6 +37,17 @@ add_executable(test_ndt_lo
         )
 
 target_link_libraries(test_ndt_lo
+        ${PROJECT_NAME}.ch5
+        ${PROJECT_NAME}.ch7
+        ${PROJECT_NAME}.common
+        ${third_party_libs}
+        )
+
+add_executable(test_icp_lo
+        test/test_icp_lo.cc
+        )
+
+target_link_libraries(test_icp_lo
         ${PROJECT_NAME}.ch5
         ${PROJECT_NAME}.ch7
         ${PROJECT_NAME}.common

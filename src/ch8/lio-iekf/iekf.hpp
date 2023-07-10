@@ -35,7 +35,7 @@ template <typename S> class IESKF
     {
         Options() = default;
         /// IEKF配置
-        int num_iterations_ = 3; // 迭代次数
+        int num_iterations_ = 5; // 迭代次数
         double quit_eps_ = 1e-3; // 终止迭代的dx大小
 
         /// IMU 测量与零偏参数
