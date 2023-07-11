@@ -106,11 +106,15 @@ class Ndt3d
     // Cauchy kernel
     double CauchyLoss(double residual, double c = 0.2);
 
+    double ComputeMatchingScore();
+
     CloudPtr target_ = nullptr;
     CloudPtr source_ = nullptr;
 
     Vec3d target_center_ = Vec3d::Zero();
     Vec3d source_center_ = Vec3d::Zero();
+
+    double total_residual_ = 0.0;
 
     SE3 gt_pose_;
     bool gt_set_ = false;

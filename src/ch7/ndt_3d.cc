@@ -186,6 +186,8 @@ bool Ndt3d::AlignNdt(SE3 &init_pose)
             err += -jacobians[idx].transpose() * infos[idx] * errors[idx];
         }
 
+        total_residual_ = total_res;
+
         if (effective_num < options_.min_effective_pts_)
         {
             LOG(WARNING) << "effective num too small: " << effective_num;
@@ -220,6 +222,16 @@ bool Ndt3d::AlignNdt(SE3 &init_pose)
 
     init_pose = pose;
     return true;
+}
+
+double ComputeMatchingScore()
+{
+    double score = 0.0;
+    if (source_->size() > 0)
+    {
+        score = total_residual_ / source_->size();
+    }
+    return score;
 }
 
 void Ndt3d::GenerateNearbyGrids()
