@@ -35,7 +35,7 @@ int main(int argc, char **argv)
             sad::common::Timer::Evaluate(
                 [&]() {
                     SE3 pose;
-                    icp_lo.AddCloud(sad::VoxelCloud(sad::PointCloud2ToCloudPtr(msg)), pose);
+                    icp_lo.AddCloud(sad::VoxelCloud(sad::PointCloud2ToCloudPtr(msg), 0.5), pose);
                 },
                 "ICP registration");
             return true;

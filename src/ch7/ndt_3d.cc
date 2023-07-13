@@ -224,7 +224,7 @@ bool Ndt3d::AlignNdt(SE3 &init_pose)
     return true;
 }
 
-double ComputeMatchingScore()
+double Ndt3d::ComputeMatchingScore()
 {
     double score = 0.0;
     if (source_->size() > 0)

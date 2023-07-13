@@ -32,6 +32,7 @@ void DirectICPLO::AddCloud(CloudPtr scan, SE3 &pose)
     CloudPtr scan_world(new PointCloudType);
     pcl::transformPointCloud(*scan, *scan_world, pose.matrix().cast<float>());
 
+    std::cout << "scans_in_local_map_.size(): " << scans_in_local_map_.size() << std::endl;
     if (IsKeyframe(pose))
     {
         last_kf_pose_ = pose;
@@ -84,6 +85,7 @@ SE3 DirectICPLO::AlignWithLocalMap(CloudPtr scan)
         SE3 T1 = estimated_poses_[estimated_poses_.size() - 1];
         SE3 T2 = estimated_poses_[estimated_poses_.size() - 2];
         guess = T1 * (T2.inverse() * T1);
+        // guess = estimated_poses_[estimated_poses_.size() - 1];
 
         align_success = icp_.AlignP2Plane(guess);
     }

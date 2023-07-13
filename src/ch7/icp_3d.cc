@@ -211,7 +211,8 @@ bool Icp3d::AlignP2Plane(SE3 &init_pose)
                     return;
                 }
 
-                double weight = CauchyLoss(dis);
+                // double weight = CauchyLoss(dis);
+                double weight = 1.0;
 
                 effect_pts[idx] = true;
 
@@ -286,7 +287,7 @@ bool Icp3d::AlignP2Plane(SE3 &init_pose)
 
 void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec18d &HTVr)
 {
-    LOG(INFO) << "compute residual and jacobians";
+    // LOG(INFO) << "compute residual and jacobians";
     assert(local_map_ != nullptr && source_ != nullptr);
 
     // 整体流程与AlignP2Plane一致，不需要迭代更新位姿，只需要计算HTVH和HTVr
@@ -338,7 +339,8 @@ void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec
                 return;
             }
 
-            double weight = CauchyLoss(dis);
+            // double weight = CauchyLoss(dis);
+            double weight = 1.0;
 
             effect_pts[idx] = true;
 
@@ -364,7 +366,7 @@ void Icp3d::ComputeResidualAndJacobians(const SE3 &input_pose, Mat18d &HTVH, Vec
     HTVH.setZero();
     HTVr.setZero();
 
-    const double info_ratio = 0.01; // 每个点的反馈因子
+    const double info_ratio = 10; // 每个点的反馈因子
 
     for (int idx = 0; idx < effect_pts.size(); ++idx)
     {

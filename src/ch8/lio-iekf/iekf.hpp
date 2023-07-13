@@ -40,8 +40,8 @@ template <typename S> class IESKF
 
         /// IMU 测量与零偏参数
         double imu_dt_ = 0.01;        // IMU测量间隔
-        double gyro_var_ = 1e-5;      // 陀螺测量标准差
-        double acce_var_ = 1e-2;      // 加计测量标准差
+        double gyro_var_ = 1e-2;      // 陀螺测量标准差
+        double acce_var_ = 1e-1;      // 加计测量标准差
         double bias_gyro_var_ = 1e-6; // 陀螺零偏游走标准差
         double bias_acce_var_ = 1e-4; // 加计零偏游走标准差
 
