@@ -14,4 +14,4 @@ max_iteration: 3
 imu_has_gravity: false
 with_ui: false
 
-use_icp: true
+use_icp: false

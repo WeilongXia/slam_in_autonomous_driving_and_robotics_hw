@@ -7,7 +7,7 @@
 
 DEFINE_double(voxel_size, 0.1, "导出地图分辨率");
 DEFINE_string(pose_source, "lidar", "使用的pose来源:lidar/rtk/opti1/opti2");
-DEFINE_string(dump_to, "./data/ch9/", "导出的目标路径");
+DEFINE_string(dump_to, "../data/ch9/", "导出的目标路径");
 
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 
     using namespace sad;
     std::map<IdType, KFPtr> keyframes;
-    if (!LoadKeyFrames("./data/ch9/keyframes.txt", keyframes))
+    if (!LoadKeyFrames("../data/ch9/keyframes.txt", keyframes))
     {
         LOG(ERROR) << "failed to load keyframes.txt";
         return -1;
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
             pose = kf->opti_pose_2_;
         }
 
-        kf->LoadScan("./data/ch9/");
+        kf->LoadScan("../data/ch9/");
 
         CloudPtr cloud_trans(new PointCloudType);
         pcl::transformPointCloud(*kf->cloud_, *cloud_trans, pose.matrix());

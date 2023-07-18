@@ -9,10 +9,11 @@
 
 // 测试优化的工作情况
 
-DEFINE_string(config_yaml, "./config/mapping.yaml", "配置文件");
+DEFINE_string(config_yaml, "../config/mapping.yaml", "配置文件");
 DEFINE_int64(stage, 1, "运行第1阶段或第2阶段优化");
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     google::InitGoogleLogging(argv[0]);
     FLAGS_stderrthreshold = google::INFO;
     FLAGS_colorlogtostderr = true;
@@ -22,7 +23,8 @@ int main(int argc, char** argv) {
 
     LOG(INFO) << "testing optimization";
     sad::Optimization opti(FLAGS_config_yaml);
-    if (!opti.Init(FLAGS_stage)) {
+    if (!opti.Init(FLAGS_stage))
+    {
         LOG(ERROR) << "failed to init frontend.";
         return -1;
     }

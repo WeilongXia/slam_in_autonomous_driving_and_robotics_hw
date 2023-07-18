@@ -3,26 +3,31 @@
 //
 
 #include "keyframe.h"
-#include <glog/logging.h>
-#include <pcl/io/pcd_io.h>
-#include <iomanip>
 #include "common/point_cloud_utils.h"
+#include <glog/logging.h>
+#include <iomanip>
+#include <pcl/io/pcd_io.h>
 
-namespace sad {
+namespace sad
+{
 
-void Keyframe::SaveAndUnloadScan(const std::string &path) {
-    if (cloud_) {
+void Keyframe::SaveAndUnloadScan(const std::string &path)
+{
+    if (cloud_)
+    {
         sad::SaveCloudToFile(path + "/" + std::to_string(id_) + ".pcd", *cloud_);
         cloud_ = nullptr;
     }
 }
 
-void Keyframe::LoadScan(const std::string &path) {
+void Keyframe::LoadScan(const std::string &path)
+{
     cloud_.reset(new PointCloudType);
     pcl::io::loadPCDFile(path + "/" + std::to_string(id_) + ".pcd", *cloud_);
 }
 
-void Keyframe::Save(std::ostream &os) {
+void Keyframe::Save(std::ostream &os)
+{
     auto save_SE3 = [](std::ostream &f, SE3 pose) {
         auto q = pose.so3().unit_quaternion();
         Vec3d t = pose.translation();
@@ -37,7 +42,8 @@ void Keyframe::Save(std::ostream &os) {
     os << std::endl;
 }
 
-void Keyframe::Load(std::istream &is) {
+void Keyframe::Load(std::istream &is)
+{
     is >> id_ >> timestamp_ >> rtk_heading_valid_ >> rtk_valid_ >> rtk_inlier_;
 
     auto load_SE3 = [](std::istream &f) -> SE3 {
@@ -53,17 +59,21 @@ void Keyframe::Load(std::istream &is) {
     opti_pose_2_ = load_SE3(is);
 }
 
-bool LoadKeyFrames(const std::string &path, std::map<IdType, std::shared_ptr<Keyframe>> &keyframes) {
+bool LoadKeyFrames(const std::string &path, std::map<IdType, std::shared_ptr<Keyframe>> &keyframes)
+{
     std::ifstream fin(path);
-    if (!fin) {
+    if (!fin)
+    {
         return false;
     }
 
-    while (!fin.eof()) {
+    while (!fin.eof())
+    {
         std::string line;
         std::getline(fin, line);
 
-        if (line.empty()) {
+        if (line.empty())
+        {
             break;
         }
 
@@ -78,4 +88,4 @@ bool LoadKeyFrames(const std::string &path, std::map<IdType, std::shared_ptr<Key
     LOG(INFO) << "Loaded kfs: " << keyframes.size();
     return true;
 }
-}  // namespace sad
+} // namespace sad
